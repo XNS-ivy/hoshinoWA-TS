@@ -1,0 +1,19 @@
+{
+  "name": "hoshinowa-ts",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/pino": "^7.0.5",
+    "@types/qrcode-terminal": "^0.12.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "baileys": "^7.0.0-rc.9",
+    "colors": "^1.4.0",
+    "pino": "^10.1.1",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
