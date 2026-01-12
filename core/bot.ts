@@ -35,14 +35,19 @@ class bot {
         })
     }
     private async connectionHandle() {
-        this.sock?.ev.on('connection.update', (connectionState) => {
+        this.sock?.ev.on('connection.update', async (connectionState) => {
             const { connection, qr } = connectionState
             if (qr && this.usePairingCode == false) {
                 qrcode.generate(qr, { small: true })
             }
-            if (!!qr && this.usePairingCode == true && this.phoneNumber && this.sock?.user?.status == undefined) this.sock?.requestPairingCode(this.phoneNumber).then((code) => {
-                console.log(code)
-            })
+            if (!!qr && this.usePairingCode == true && this.phoneNumber && this.sock?.user?.status == undefined) {
+                setTimeout(() => {
+                    logger.log('Attempting Connection Using Pairing Code', 'INFO', 'socket')
+                }, 1000)
+                await this.sock?.requestPairingCode(this.phoneNumber).then((code) => {
+                    logger.log(`Pairing Code : ${code.split('').join('-')}`, 'INFO', 'socket')
+                })
+            }
             switch (connection) {
                 case 'open':
                     logger.log(`Connected With : ${this.sock?.user?.name}`, 'INFO', 'socket')
@@ -52,7 +57,7 @@ class bot {
                     break
                 case 'connecting':
                     if (this.sock?.user?.status == undefined) {
-                        // logger.log(`Attempting Connecting Method : ${isPair ? 'Pairing Code' : 'QR Code'}`, 'INFO', 'socket')
+                        logger.log(`Attempting Connecting Method : ${this.usePairingCode ? 'Pairing Code' : 'QR Code'}`, 'INFO', 'socket')
                     } else {
                         logger.log('Connecting...', 'INFO', 'socket')
                     }
