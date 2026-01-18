@@ -1,5 +1,6 @@
-import sock from '@core/bot'
-const phoneNumber = '6283199219663'
+import { start, socketStopper } from '@utils/socket-starter'
+import envCheck from '@utils/env-checker'
 
-
-await sock.init(true, phoneNumber)
+envCheck()
+await start()
+await socketStopper()

@@ -1,4 +1,3 @@
-// utils/logger.ts
 import colors from 'colors'
 
 export type LogType = 'INFO' | 'WARN' | 'ERROR' | 'FATAL'
