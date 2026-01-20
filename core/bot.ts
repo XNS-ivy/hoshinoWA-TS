@@ -9,12 +9,14 @@ import { start } from '@utils/socket-starter'
 class bot {
     private sock: null | WASocket
     private usePairingCode: boolean
-    private phoneNumber: string | null
+    private phoneNumber: string | null | undefined
     private state: null | AuthenticationState
     private saveCreds: (() => Promise<void>) | null
     private autodie: number
-    private static maxAutoDie: number = Number(process.env.MAX_DIE_SOCKET) <= 0 ? 2 : Number(process.env.MAX_DIE_SOCKET)
-    private static authFile: string = String(process.env.AUTH_FILE_NAME) == '' ? 'auth' : String(process.env.AUTH_FILE_NAME)
+    private static maxAutoDie: number = (Number(process.env.MAX_DIE_SOCKET) <= 0 ||
+        !Number.isNaN(process.env.MAX_DIE_SOCKET)) ? 2 : Number(process.env.MAX_DIE_SOCKET)
+    private static authFile: string = (String(process.env.AUTH_FILE_NAME) == '' ||
+        !String(process.env.AUTH_FILE_NAME)) ? 'auth' : String(process.env.AUTH_FILE_NAME)
     constructor() {
         this.state = null
         this.sock = null
@@ -23,7 +25,7 @@ class bot {
         this.saveCreds = null
         this.autodie = 0
     }
-    async init(pairingCode: boolean = false, phoneNumber: string | null) {
+    async init(pairingCode: boolean = false, phoneNumber: string | null | undefined) {
         const { saveCreds, state } = await useMultiFileAuthState(bot.authFile)
         this.state = state
         this.saveCreds = saveCreds
@@ -49,13 +51,17 @@ class bot {
                 this.autodie++
             }
             if (!!qr && this.usePairingCode == true && this.phoneNumber && this.sock?.user?.status == undefined) {
-                setTimeout(() => {
-                    logger.log('Attempting Connection Using Pairing Code', 'INFO', 'socket')
-                }, 1000)
-                await this.sock?.requestPairingCode(this.phoneNumber).then((code) => {
-                    logger.log(`Pairing Code : ${code.split('').join('-')}`, 'INFO', 'socket')
-                    this.autodie++
-                })
+                try {
+                    setTimeout(() => {
+                        logger.log('Attempting Connection Using Pairing Code', 'INFO', 'socket')
+                    }, 1000)
+                    await this.sock?.requestPairingCode(this.phoneNumber).then((code) => {
+                        logger.log(`Pairing Code : ${code.split('').join('-')}`, 'INFO', 'socket')
+                        this.autodie++
+                    })
+                } catch (error) {
+                    logger.log('Cannot Request Pairing Code! Check Your Phone Number Correctly', 'ERROR', 'socket')
+                }
             }
             switch (connection) {
                 case 'open':
@@ -72,10 +78,10 @@ class bot {
                         case DisconnectReason.connectionReplaced:
                         case DisconnectReason.loggedOut:
                         case DisconnectReason.multideviceMismatch:
+                            this.sock?.logout()
                             logger.log('Deleting Socket Creds', 'WARN', 'socket')
                             fs.rmSync(bot.authFile, { recursive: true })
-                            setTimeout(() => { }, 1000)
-                            await start()
+                            setTimeout(async () => { await start() }, 1000)
                             break
                         case DisconnectReason.restartRequired:
                         case DisconnectReason.connectionLost:
