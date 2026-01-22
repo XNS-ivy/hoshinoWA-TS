@@ -1,4 +1,4 @@
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from 'baileys'
+import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } from 'baileys'
 import type { WASocket, AuthenticationState } from 'baileys'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
@@ -33,17 +33,30 @@ class bot {
         this.phoneNumber = phoneNumber
 
         await this.start()
-        await this.connectionHandle()
         await this.Events()
     }
     private async start() {
         if (this.saveCreds == null || this.state == null) return
         this.sock = makeWASocket({
             auth: this.state,
-            logger: pino({ level: 'silent' })
+            logger: pino({ level: 'silent' }),
+            browser: Browsers.appropriate('Google Chrome'),
+            emitOwnEvents: false,
+            generateHighQualityLinkPreview: true,
         })
     }
-    private async connectionHandle() {
+    private async Events() {
+        // event savecreds
+
+        if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
+
+        // evemt message
+        this.sock?.ev.on('messages.upsert', ({ messages, type, requestId }) => {
+
+        })
+
+        // event connection
+
         this.sock?.ev.on('connection.update', async (connectionState) => {
             const { connection, qr, lastDisconnect } = connectionState
             if (qr && this.usePairingCode == false) {
@@ -107,10 +120,6 @@ class bot {
                     break
             }
         })
-    }
-    private async Events() {
-        if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
-
     }
     private async message() { }
     async checkDie() {
