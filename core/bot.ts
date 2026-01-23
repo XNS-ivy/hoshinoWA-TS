@@ -5,6 +5,7 @@ import pino from 'pino'
 import { Boom } from '@hapi/boom'
 import fs from 'fs'
 import { start } from '@utils/socket-starter'
+import { message } from '@local_modules/whatsapp/msg-processing'
 
 class bot {
     private sock: null | WASocket
@@ -51,8 +52,19 @@ class bot {
         if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
 
         // evemt message
-        this.sock?.ev.on('messages.upsert', ({ messages, type, requestId }) => {
+        this.sock?.ev.on('messages.upsert', async ({ messages, type, requestId }) => {
+            if (type == 'notify') {
+                for (const msg of messages) {
+                    const chat = await message.fetch(msg, type)
+                    if (chat) logger.log('got new chat!', 'INFO', 'socket')
+                }
+            }
 
+            if (type == 'append') {
+                for (const msg of messages) {
+
+                }
+            }
         })
 
         // event connection
