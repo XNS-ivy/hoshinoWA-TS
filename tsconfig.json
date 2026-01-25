@@ -28,7 +28,8 @@
     "paths": {
       "@core/*": ["./core/*"],
       "@utils/*": ["./utils/*"],
-      "@local_modules/*": ["./modules/*"]
+      "@local_modules/*": ["./modules/*"],
+      "@schemas/*":["./schemas/*"]
     }
   }
 }

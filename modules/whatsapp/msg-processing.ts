@@ -1,5 +1,5 @@
 import type { WAMessage, proto, WAMessageKey } from "baileys"
-// import Config from "@bot/bot-config"
+import { config as conf } from "@core/bot-config"
 
 
 export class MessageParse {
@@ -8,7 +8,7 @@ export class MessageParse {
         "senderKeyDistributionMessage",
         "messageContextInfo",
     ]
-    // private config = Config
+    private config = conf
 
     async fetch(msg: WAMessage, notifyType: string): Promise<IMessageFetch | null> {
         const { key, pushName, message } = msg
@@ -38,7 +38,7 @@ export class MessageParse {
             ? await this.quotedMessageFetch(quotedMessage)
             : null
         const isOnGroup = remoteJid.endsWith('@g.us') ? true : false
-        const prefix = "." // temporary prefix
+        const prefix = await this.config.getConfig('prefix')
         const body = text ?? caption ?? ""
         let commandContent: null | { cmd: string; args: string[] } = null
         if (body.startsWith(prefix)) {
