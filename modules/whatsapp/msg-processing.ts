@@ -10,7 +10,7 @@ export class MessageParse {
     ]
     private config = conf
 
-    async fetch(msg: WAMessage, notifyType: string): Promise<IMessageFetch | null> {
+    async fetch(msg: WAMessage): Promise<IMessageFetch | null> {
         const { key, pushName, message } = msg
         const { remoteJid } = key
         const lid = this.getLID(key)
@@ -71,7 +71,6 @@ export class MessageParse {
             raw: msg,
             rawQuoted: quotedMessage ?? null,
             commandContent,
-            notifyType,
         }
     }
 
@@ -147,7 +146,6 @@ export interface IMessageFetch extends IKeyFetch {
         cmd: string,
         args: Array<string>,
     }
-    notifyType: string,
 }
 
 interface IQuotedMessage {

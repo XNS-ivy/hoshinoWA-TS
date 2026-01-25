@@ -48,21 +48,27 @@ class bot {
     }
     private async Events() {
         // event savecreds
-
         if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
 
         // evemt message
-        this.sock?.ev.on('messages.upsert', async ({ messages, type, requestId }) => {
+        this.sock?.ev.on('messages.upsert', async ({ messages, type }) => {
             if (type == 'notify') {
                 for (const msg of messages) {
-                    const chat = await message.fetch(msg, type)
-                    if (chat) logger.log('got new chat!', 'INFO', 'socket')
+                    const chat = await message.fetch(msg)
+                    if (chat) {
+                        logger.log('Got Notify Message!', 'INFO', 'socket')
+                        if (chat.commandContent) await this.message()
+                    }
                 }
             }
 
             if (type == 'append') {
                 for (const msg of messages) {
-
+                    const chat = await message.fetch(msg)
+                    if (chat) {
+                        logger.log('Bot Append Message!', 'INFO', 'socket')
+                        if (chat.commandContent) await this.message()
+                    }
                 }
             }
         })
@@ -133,7 +139,9 @@ class bot {
             }
         })
     }
-    private async message() { }
+    private async message() {
+
+    }
     async checkDie() {
         if (this.sock?.user == undefined) {
             if (this.autodie >= bot.maxAutoDie) {
