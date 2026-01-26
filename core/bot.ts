@@ -5,7 +5,8 @@ import pino from 'pino'
 import { Boom } from '@hapi/boom'
 import fs from 'fs'
 import { start } from '@utils/socket-starter'
-import { message } from '@local_modules/whatsapp/msg-processing'
+import { message, type IMessageFetch } from '@local_modules/whatsapp/msg-processing'
+import command from '@core/commands'
 
 class bot {
     private sock: null | WASocket
@@ -14,6 +15,7 @@ class bot {
     private state: null | AuthenticationState
     private saveCreds: (() => Promise<void>) | null
     private autodie: number
+    private static command = command
     private static maxAutoDie: number = (Number(process.env.MAX_DIE_SOCKET) <= 0 ||
         !Number.isNaN(process.env.MAX_DIE_SOCKET)) ? 2 : Number(process.env.MAX_DIE_SOCKET)
     private static authFile: string = (String(process.env.AUTH_FILE_NAME) == '' ||
@@ -57,7 +59,7 @@ class bot {
                     const chat = await message.fetch(msg)
                     if (chat) {
                         logger.log('Got Notify Message!', 'INFO', 'socket')
-                        if (chat.commandContent) await this.message()
+                        if (chat.commandContent) await this.message(chat)
                     }
                 }
             }
@@ -67,7 +69,7 @@ class bot {
                     const chat = await message.fetch(msg)
                     if (chat) {
                         logger.log('Bot Append Message!', 'INFO', 'socket')
-                        if (chat.commandContent) await this.message()
+                        if (chat.commandContent) await this.message(chat)
                     }
                 }
             }
@@ -139,8 +141,8 @@ class bot {
             }
         })
     }
-    private async message() {
-
+    private async message(msg: IMessageFetch) {
+        if (this.sock) bot.command.execute(msg, this.sock)
     }
     async checkDie() {
         if (this.sock?.user == undefined) {

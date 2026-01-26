@@ -144,3 +144,4 @@ auth/
 # test file
 test.*
 databases/bot-configs.json
+test*.*
