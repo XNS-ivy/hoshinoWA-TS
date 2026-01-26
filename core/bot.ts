@@ -7,8 +7,10 @@ import fs from 'fs'
 import { start } from '@utils/socket-starter'
 import { message, type IMessageFetch } from '@local_modules/whatsapp/msg-processing'
 import command from '@core/commands'
+import NodeCache from 'node-cache'
 
 class bot {
+    private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true })
     private sock: null | WASocket
     private usePairingCode: boolean
     private phoneNumber: string | null | undefined
@@ -46,6 +48,7 @@ class bot {
             browser: Browsers.appropriate('Google Chrome'),
             emitOwnEvents: false,
             generateHighQualityLinkPreview: true,
+            cachedGroupMetadata: async (jid) => await bot.groupCache.get(jid),
         })
     }
     private async Events() {

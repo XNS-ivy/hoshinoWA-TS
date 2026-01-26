@@ -1,8 +1,8 @@
-const command: ICommand = {
-    name: "example",
-    access: ["owner", "regular", "premium"],
+export default {
+    name: 'example2',
+    access: "premium",
     inGroup: true,
-    inGroupAccess: ["admin", "member"],
+    inGroupAccess: "member",
     args: ["args1", "args2"],
 
     async execute(args, { msg, socket, whoAMI }: ICTX) {
@@ -10,6 +10,4 @@ const command: ICommand = {
             text: `Command example running\nArgs: ${args.join(", ")}`
         })
     }
-}
-
-export default command
+} as ICommand

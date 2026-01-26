@@ -14,9 +14,9 @@ declare global {
 
     interface ICommand {
         name: string
-        access?: Array<"owner" | "regular" | "premium">
+        access?: "owner" | "regular" | "premium"
         inGroup?: boolean
-        inGroupAccess?: Array<"admin" | "member">
+        inGroupAccess?: "admin" | "member"
         args?: string[]
         execute: (
             args: string[],
