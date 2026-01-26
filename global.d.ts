@@ -18,6 +18,7 @@ declare global {
         inGroup?: boolean
         inGroupAccess?: "admin" | "member"
         args?: string[]
+        usage: string | Array<string> | undefined | null | Function | any
         execute: (
             args: string[],
             ctx: ICTX
