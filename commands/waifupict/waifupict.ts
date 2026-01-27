@@ -9,6 +9,7 @@ export default {
         'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy',
         'wink', 'poke', 'dance', 'cringe'
     ],
+    // need to handle gif to mp4 using ffmpeg native to handle gif send message
     async execute(args, {msg, socket}){
         const available = Array.isArray(this.args) ? this.args : []
         const input = args?.[0]?.toLowerCase()

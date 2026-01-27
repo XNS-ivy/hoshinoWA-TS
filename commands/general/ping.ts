@@ -2,6 +2,7 @@ import ping from 'ping'
 export default {
     name: 'ping',
     access: 'regular',
+    usage: ['ping <website url>', 'ping'],
     async execute(args, { msg, socket }) {
         const target = args[0] ? args[0].replace(/^https?:\/\//, '') : 'google.com'
         const host = target.includes('.') ? target : `${target}.com`

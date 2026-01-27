@@ -146,6 +146,7 @@ export interface IMessageFetch extends IKeyFetch {
         cmd: string,
         args: Array<string>,
     }
+    // add more type here if needed
 }
 
 interface IQuotedMessage {

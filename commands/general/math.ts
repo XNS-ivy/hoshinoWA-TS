@@ -2,7 +2,7 @@ export default {
     name: "math",
     access: "regular",
     args: ["a", "operator", "b"],
-
+    usage: 'math 1 <operator> 2',
     async execute(args, { msg, socket }: ICTX) {
         if (args.length < 3) {
             await socket.sendMessage(msg.remoteJid, {
