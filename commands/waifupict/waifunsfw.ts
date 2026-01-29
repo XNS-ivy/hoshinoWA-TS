@@ -5,13 +5,10 @@ import { gifToMP4 } from '@utils/ffmpeg'
 import { downloadFile } from '@utils/axios'
 
 export default {
-    name: 'waifupict',
+    name: 'waifunsfw',
     access: 'regular',
     args: [
-        'waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cry', 'cuddle', 'lick',
-        'pat', 'smug', 'blush', 'bonk', 'yeet', 'smile', 'wave', 'highfive',
-        'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy',
-        'wink', 'poke', 'dance', 'cringe'
+        'waifu', 'neko', 'trap', 'blowjob'
     ],
     usage: 'waifupict <type>',
     async execute(args, { msg, socket }) {
@@ -26,7 +23,7 @@ export default {
             socket.sendMessage(msg.remoteJid, { text: text }, { ephemeralExpiration: msg.expiration, quoted: msg.raw })
         } else {
             try {
-                const res = await axios.get(`https://api.waifu.pics/sfw/${category}`)
+                const res = await axios.get(`https://api.waifu.pics/nsfw/${category}`)
                 const url: string = res.data.url
 
                 const tmpDir = './media/temp'
@@ -44,7 +41,7 @@ export default {
                         {
                             video: fs.readFileSync(mp4Path),
                             gifPlayback: true,
-                            caption: `✨ Random *${category}*`
+                            caption: `✨ Random ${category}`
                         },
                         { quoted: msg.raw }
                     )
