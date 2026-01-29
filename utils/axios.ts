@@ -1,14 +1,12 @@
 import axios from 'axios'
 import fs from 'fs'
+import { pipeline } from 'stream/promises'
 
-export async function downloadFile(url: string, output: string) {
-  const res = await axios.get(url, { responseType: 'stream' })
-  const writer = fs.createWriteStream(output)
+export async function downloadFile(url: string, dest: string) {
+    const res = await axios.get(url, { responseType: 'stream' })
 
-  res.data.pipe(writer)
-
-  return new Promise<void>((resolve, reject) => {
-    writer.on('finish', resolve)
-    writer.on('error', reject)
-  })
+    await pipeline(
+        res.data,
+        fs.createWriteStream(dest)
+    )
 }

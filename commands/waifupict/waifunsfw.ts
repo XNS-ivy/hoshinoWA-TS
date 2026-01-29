@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { gifToMP4 } from '@utils/ffmpeg'
 import { downloadFile } from '@utils/axios'
+import { safeUnlink } from '@utils/fs'
 
 export default {
     name: 'waifunsfw',
@@ -22,6 +23,9 @@ export default {
             const text = `❌ Invalid category: *${input}*\n\n✅ Available types:\n${listText}`
             socket.sendMessage(msg.remoteJid, { text: text }, { ephemeralExpiration: msg.expiration, quoted: msg.raw })
         } else {
+            let gifPath: string | undefined
+            let mp4Path: string | undefined
+
             try {
                 const res = await axios.get(`https://api.waifu.pics/nsfw/${category}`)
                 const url: string = res.data.url
@@ -29,37 +33,38 @@ export default {
                 const tmpDir = './media/temp'
                 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
 
-                const base = Date.now()
-                const gifPath = path.join(tmpDir, `${base}.gif`)
-                const mp4Path = path.join(tmpDir, `${base}.mp4`)
+                const base = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+                gifPath = path.join(tmpDir, `${base}.gif`)
+                mp4Path = path.join(tmpDir, `${base}.mp4`)
+
                 await downloadFile(url, gifPath)
                 if (url.endsWith('.gif')) {
                     await gifToMP4(gifPath, mp4Path)
-
+                    const buffer = await fs.promises.readFile(mp4Path)
                     await socket.sendMessage(
                         msg.remoteJid,
                         {
-                            video: fs.readFileSync(mp4Path),
+                            video: buffer,
                             gifPlayback: true,
-                            caption: `✨ Random ${category}`
+                            caption: `✨ Random *${category}*`
                         },
                         { quoted: msg.raw }
                     )
-
-                    fs.unlinkSync(gifPath)
-                    fs.unlinkSync(mp4Path)
                     return
                 }
 
                 await socket.sendMessage(
                     msg.remoteJid,
-                    { image: { url }, caption: '✨ Random waifu' },
+                    { image: { url }, caption: `✨ Random *${category}*` },
                     { quoted: msg.raw }
                 )
             } catch (error) {
                 const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error))
                 logger.log(`WaifuPics Error: ${errMsg}`, 'ERROR', 'waifupict')
                 socket.sendMessage(msg.remoteJid, { text: '❌ Failed to fetch anime image. Try again later.' }, { ephemeralExpiration: msg.expiration, quoted: msg.raw })
+            } finally {
+                if (gifPath) await safeUnlink(gifPath)
+                if (mp4Path) await safeUnlink(mp4Path)
             }
         }
     }
