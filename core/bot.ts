@@ -41,10 +41,7 @@ class bot {
     }
     private async start() {
         if (!this.state || !this.saveCreds) return
-        if (this.sock) {
-            this.deleteEvents()
-            this.sock = null
-        }
+        if (this.sock) await this.deleteEvents()
         this.sock = makeWASocket({
             auth: this.state,
             logger: pino({ level: 'silent' }),
@@ -56,9 +53,7 @@ class bot {
         await this.Events()
     }
     private async Events() {
-        // clearing all old events
         if (!this.sock) return
-        this.deleteEvents()
 
         // event savecreds
         if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)

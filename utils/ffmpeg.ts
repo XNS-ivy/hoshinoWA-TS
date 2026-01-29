@@ -1,6 +1,6 @@
 import ffmpeg from 'fluent-ffmpeg'
 
-export function gifToMP4(input: string, output: string): Promise<void> {
+export async function gifToMP4(input: string, output: string): Promise<void> {
   return new Promise((resolve, reject) => {
     ffmpeg(input)
       .outputOptions([
