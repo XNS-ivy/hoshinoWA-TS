@@ -10,7 +10,7 @@ import command from '@core/commands'
 import NodeCache from 'node-cache'
 
 class bot {
-    private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true })
+    private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true, maxKeys: 200, })
     private sock: null | WASocket
     private usePairingCode: boolean
     private phoneNumber: string | null | undefined
@@ -38,10 +38,13 @@ class bot {
         this.phoneNumber = phoneNumber
 
         await this.start()
-        await this.Events()
     }
     private async start() {
-        if (this.saveCreds == null || this.state == null) return
+        if (!this.state || !this.saveCreds) return
+        if (this.sock) {
+            this.deleteEvents()
+            this.sock = null
+        }
         this.sock = makeWASocket({
             auth: this.state,
             logger: pino({ level: 'silent' }),
@@ -50,13 +53,18 @@ class bot {
             generateHighQualityLinkPreview: true,
             cachedGroupMetadata: async (jid) => await bot.groupCache.get(jid),
         })
+        await this.Events()
     }
     private async Events() {
+        // clearing all old events
+        if (!this.sock) return
+        this.deleteEvents()
+
         // event savecreds
         if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
 
         // evemt message
-        this.sock?.ev.on('messages.upsert', async ({ messages, type }) => {
+        this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
             if (type == 'notify') {
                 for (const msg of messages) {
                     const chat = await message.fetch(msg)
@@ -80,7 +88,7 @@ class bot {
 
         // event connection
 
-        this.sock?.ev.on('connection.update', async (connectionState) => {
+        this.sock.ev.on('connection.update', async (connectionState) => {
             const { connection, qr, lastDisconnect } = connectionState
             if (qr && this.usePairingCode == false) {
                 qrcode.generate(qr, { small: true })
@@ -146,6 +154,12 @@ class bot {
     }
     private async message(msg: IMessageFetch) {
         if (this.sock) bot.command.execute(msg, this.sock)
+    }
+    private async deleteEvents() {
+        if (!this.sock) return
+        this.sock.ev.removeAllListeners('connection.update')
+        this.sock.ev.removeAllListeners('messages.upsert')
+        this.sock.ev.removeAllListeners('creds.update')
     }
     async checkDie() {
         if (this.sock?.user == undefined) {
