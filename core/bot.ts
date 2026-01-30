@@ -41,7 +41,6 @@ class bot {
     }
     private async start() {
         if (!this.state || !this.saveCreds) return
-        if (this.sock) await this.deleteEvents()
         this.sock = makeWASocket({
             auth: this.state,
             logger: pino({ level: 'silent' }),
@@ -149,12 +148,6 @@ class bot {
     }
     private async message(msg: IMessageFetch) {
         if (this.sock) bot.command.execute(msg, this.sock)
-    }
-    private async deleteEvents() {
-        if (!this.sock) return
-        this.sock.ev.removeAllListeners('connection.update')
-        this.sock.ev.removeAllListeners('messages.upsert')
-        this.sock.ev.removeAllListeners('creds.update')
     }
     async checkDie() {
         if (this.sock?.user == undefined) {

@@ -1,10 +1,12 @@
 import fs from 'fs'
 
-export async function safeUnlink(file?: string) {
-    if (!file) return
+export async function safeUnlink(path?: string) {
+    if (!path) return
     try {
-        if (fs.existsSync(file)) fs.unlinkSync(file)
+        await fs.promises.unlink(path)
     } catch (e) {
-        logger.log(`Failed to cleanup file: ${file}`, 'WARN', 'temp-cleanup')
+        if ((e as any).code !== 'ENOENT') {
+            console.warn('[safeUnlink]', e)
+        }
     }
 }
