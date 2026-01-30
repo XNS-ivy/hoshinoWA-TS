@@ -1,4 +1,4 @@
-import type { WAMessage, proto, WAMessageKey } from "baileys"
+import type { WAMessage, proto, WAMessageKey, MessageType } from "baileys"
 import { config as conf } from "@core/bot-config"
 
 
@@ -132,7 +132,7 @@ export interface IMessageFetch extends IKeyFetch {
     pushName: string | null | undefined,
     isOnGroup: boolean
     messageTimestamp: number,
-    type: string,
+    type: keyof proto.IMessage,
     messageObject?: string,
     text: string | null | undefined,
     caption: string | null | undefined,

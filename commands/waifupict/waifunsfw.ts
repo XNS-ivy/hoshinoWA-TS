@@ -64,7 +64,7 @@ export default {
                 logger.log(
                     `WaifuPics Error: ${error instanceof Error ? error.message : String(error)}`,
                     'ERROR',
-                    'waifupict'
+                    'waifunsfw'
                 )
                 await socket.sendMessage(
                     msg.remoteJid,
