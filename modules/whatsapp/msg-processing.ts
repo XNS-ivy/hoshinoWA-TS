@@ -1,4 +1,4 @@
-import type { WAMessage, proto, WAMessageKey, MessageType } from "baileys"
+import { type WAMessage, type proto, type WAMessageKey, getContentType } from "baileys"
 import { config as conf } from "@core/bot-config"
 
 
@@ -27,7 +27,7 @@ export class MessageParse {
             }
         }
 
-        const messageObject = Object.keys(res)[0] as keyof proto.IMessage
+        const messageObject = getContentType(m) as keyof proto.IMessage
         if (!messageObject) return null
 
         const content = res[messageObject]
@@ -79,7 +79,7 @@ export class MessageParse {
         const extracted = this.extractQuoted(qMsg)
         if (!extracted) return null
 
-        const quotedType = Object.keys(extracted)[0] as keyof proto.IMessage
+        const quotedType = getContentType(extracted) as keyof proto.IMessage
         const quotedContent: any = extracted[quotedType]
 
         return {
@@ -150,7 +150,7 @@ export interface IMessageFetch extends IKeyFetch {
 }
 
 interface IQuotedMessage {
-    type: string,
+    type: keyof proto.IMessage,
     text: string | null,
     caption: string | null,
     description: string | null,
