@@ -9,6 +9,7 @@ export async function makeSticker(
     buffer: Buffer,
     opt: StickerOptions = {}
 ) {
+    //  need to add sticker pack name
     const quality = opt.quality ?? 80
     const image = sharp(buffer)
 

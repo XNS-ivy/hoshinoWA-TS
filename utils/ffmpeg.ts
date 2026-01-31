@@ -72,7 +72,7 @@ export async function makeAnimatedSticker(
   buffer: Buffer,
   opt: AnimatedStickerOptions = {}
 ): Promise<Buffer> {
-
+//  need to add sticker pack name
   const id = randomUUID()
   const tmpDir = os.tmpdir()
   const input = path.join(tmpDir, `${id}.mp4`)
