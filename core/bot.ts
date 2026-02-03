@@ -74,10 +74,8 @@ class bot {
                     logger.log(`Disconnected : ${lastDisconnect?.error?.message}`, 'WARN', 'socket')
 
                     switch (disconnected) {
-                        case DisconnectReason.badSession:
-                        case DisconnectReason.connectionReplaced:
                         case DisconnectReason.loggedOut:
-                        case DisconnectReason.multideviceMismatch:
+                        case DisconnectReason.forbidden:
                             this.sock?.logout()
                             logger.log('Deleting Socket Creds', 'WARN', 'socket')
                             fs.rmSync(bot.authFile, { recursive: true })
@@ -87,7 +85,9 @@ class bot {
                         case DisconnectReason.connectionLost:
                         case DisconnectReason.unavailableService:
                         case DisconnectReason.connectionClosed:
-                        case DisconnectReason.forbidden:
+                        case DisconnectReason.multideviceMismatch:
+                        case DisconnectReason.connectionReplaced:
+                        case DisconnectReason.badSession:
                             await start()
                             break
                         default:
