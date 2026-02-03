@@ -27,7 +27,9 @@
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
       "@core/*": ["./core/*"],
-      "@utils/*": ["./utils/*"]
+      "@utils/*": ["./utils/*"],
+      "@local_modules/*": ["./modules/*"],
+      "@schemas/*":["./schemas/*"]
     }
   }
 }

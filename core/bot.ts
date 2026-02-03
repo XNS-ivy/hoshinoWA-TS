@@ -1,18 +1,23 @@
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from 'baileys'
+import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } from 'baileys'
 import type { WASocket, AuthenticationState } from 'baileys'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
 import { Boom } from '@hapi/boom'
 import fs from 'fs'
 import { start } from '@utils/socket-starter'
+import { message, type IMessageFetch } from '@local_modules/whatsapp/msg-processing'
+import command from '@core/commands'
+import NodeCache from 'node-cache'
 
 class bot {
+    private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true, maxKeys: 200, })
     private sock: null | WASocket
     private usePairingCode: boolean
     private phoneNumber: string | null | undefined
     private state: null | AuthenticationState
     private saveCreds: (() => Promise<void>) | null
     private autodie: number
+    private static command = command
     private static maxAutoDie: number = (Number(process.env.MAX_DIE_SOCKET) <= 0 ||
         !Number.isNaN(process.env.MAX_DIE_SOCKET)) ? 2 : Number(process.env.MAX_DIE_SOCKET)
     private static authFile: string = (String(process.env.AUTH_FILE_NAME) == '' ||
@@ -33,18 +38,51 @@ class bot {
         this.phoneNumber = phoneNumber
 
         await this.start()
-        await this.connectionHandle()
-        await this.Events()
     }
     private async start() {
-        if (this.saveCreds == null || this.state == null) return
+        if (!this.state || !this.saveCreds) return
         this.sock = makeWASocket({
             auth: this.state,
-            logger: pino({ level: 'silent' })
+            logger: pino({ level: 'silent' }),
+            browser: Browsers.appropriate('Google Chrome'),
+            emitOwnEvents: false,
+            generateHighQualityLinkPreview: true,
+            cachedGroupMetadata: async (jid) => await bot.groupCache.get(jid),
         })
+        await this.Events()
     }
-    private async connectionHandle() {
-        this.sock?.ev.on('connection.update', async (connectionState) => {
+    private async Events() {
+        if (!this.sock) return
+
+        // event savecreds
+        if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
+
+        // evemt message
+        this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            if (type == 'notify') {
+                for (const msg of messages) {
+                    const chat = await message.fetch(msg)
+                    if (chat) {
+                        logger.log('Got Notify Message!', 'INFO', 'socket')
+                        if (chat.commandContent) await this.message(chat)
+                    }
+                }
+            }
+
+            if (type == 'append') {
+                for (const msg of messages) {
+                    const chat = await message.fetch(msg)
+                    if (chat) {
+                        logger.log('Bot Append Message!', 'INFO', 'socket')
+                        if (chat.commandContent) await this.message(chat)
+                    }
+                }
+            }
+        })
+
+        // event connection
+
+        this.sock.ev.on('connection.update', async (connectionState) => {
             const { connection, qr, lastDisconnect } = connectionState
             if (qr && this.usePairingCode == false) {
                 qrcode.generate(qr, { small: true })
@@ -108,11 +146,9 @@ class bot {
             }
         })
     }
-    private async Events() {
-        if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
-
+    private async message(msg: IMessageFetch) {
+        if (this.sock) bot.command.execute(msg, this.sock)
     }
-    private async message() { }
     async checkDie() {
         if (this.sock?.user == undefined) {
             if (this.autodie >= bot.maxAutoDie) {
