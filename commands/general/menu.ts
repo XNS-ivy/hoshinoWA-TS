@@ -18,7 +18,7 @@ export default {
             const target = cmdMap.get(args[0])
             if (!target) {
                 return socket.sendMessage(msg.remoteJid, {
-                    text: `❌ Command *${args[0]}* tidak ditemukan`
+                    text: `❌ Command *${args[0]}* not found`
                 })
             }
 
@@ -31,7 +31,7 @@ export default {
             const target = cmdMap.get(args[1])
             if (!target) {
                 return socket.sendMessage(msg.remoteJid, {
-                    text: `❌ Command *${args[1]}* tidak ditemukan`
+                    text: `❌ Command *${args[1]}* not found`
                 })
             }
 
