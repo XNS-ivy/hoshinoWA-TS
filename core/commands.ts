@@ -62,6 +62,27 @@ export class CommandHandling {
             this.commands.set(command.name, command)
         }
     }
+    async getCommandMapOnly(
+        whoAMI: { role: 'private' | 'admin' | 'member' },
+        isGroup: boolean
+    ) {
+        const result: ICommand[] = []
+
+        for (const [, command] of this.commands) {
+            if (command.inGroup && !isGroup) continue
+            if (isGroup && command.inGroupAccess) {
+                if (
+                    command.inGroupAccess === 'admin' &&
+                    whoAMI.role !== 'admin'
+                ) continue
+            }
+
+            result.push(command)
+        }
+
+        return result
+    }
+
 }
 
 /* export interface ICommand {

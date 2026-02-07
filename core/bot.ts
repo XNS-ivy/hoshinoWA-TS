@@ -116,9 +116,8 @@ class bot {
                     switch (disconnected) {
                         case DisconnectReason.loggedOut:
                         case DisconnectReason.forbidden:
-                            this.sock?.logout()
                             logger.log('Deleting Socket Creds', 'WARN', 'socket')
-                            fs.rmSync(bot.authFile, { recursive: true })
+                            fs.rmSync(bot.authFile, { recursive: true, force: true })
                             setTimeout(async () => { await start() }, 1000)
                             break
                         case DisconnectReason.restartRequired:
@@ -155,7 +154,7 @@ class bot {
     async checkDie() {
         if (this.sock?.user == undefined) {
             if (this.autodie >= bot.maxAutoDie) {
-                logger.log('Terminate Program Because No Connection To Whatapp Socket', 'INFO', 'socket')
+                logger.log('Terminate Program Because No Connection To Whatapp Socket', 'FATAL', 'socket')
                 setTimeout(() => { process.exit(1) }, 500)
             }
         }

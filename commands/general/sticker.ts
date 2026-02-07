@@ -43,6 +43,6 @@ export default {
                 crop: args[0] === 'crop'
             })
 
-        await socket.sendMessage(msg.remoteJid, { sticker })
+        await socket.sendMessage(msg.remoteJid, { sticker }, { quoted: msg.raw })
     }
 } as ICommand
