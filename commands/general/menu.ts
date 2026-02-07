@@ -5,7 +5,7 @@ export default {
     access: 'regular',
     usage: ['menu', 'menu <command>', 'menu usage <command>'],
     async execute(args, { msg, socket, whoAMI }) {
-        const prefix = config.getConfig('prefix')
+        const prefix = await config.getConfig('prefix')
         const commands = await commandHandler.getCommandMapOnly(
             whoAMI,
             msg.isOnGroup
@@ -14,10 +14,6 @@ export default {
         const cmdMap = new Map(
             commands.map(c => [c.name, c])
         )
-
-        // =====================
-        // menu <command>
-        // =====================
         if (args.length === 1 && args[0]) {
             const target = cmdMap.get(args[0])
             if (!target) {
@@ -31,9 +27,6 @@ export default {
             })
         }
 
-        // =====================
-        // menu usage <command>
-        // =====================
         if (args.length === 2 && args[0] === 'usage' && args[1]) {
             const target = cmdMap.get(args[1])
             if (!target) {
@@ -50,9 +43,6 @@ export default {
             })
         }
 
-        // =====================
-        // menu (list all)
-        // =====================
         const map = new Map<string, ICommand[]>()
         for (const cmd of commands) {
             const key = cmd.access ?? 'regular'
@@ -72,9 +62,10 @@ export default {
             text += '\n'
         }
 
-        text += `Type *${prefix}menu <command>* for details\n`
-        text += `Type *${prefix}menu usage <command>* for usage\n`
+        text += `Type *${prefix}${this.name} <command>* for details\n`
+        text += `Type *${prefix}${this.name} usage <command>* for usage\n`
         text += `\nTotal: ${commands.length} commands`
+        text += `Bot prefix : ${prefix}`
 
         await socket.sendMessage(msg.remoteJid, { text }, { quoted: msg.raw })
     },
