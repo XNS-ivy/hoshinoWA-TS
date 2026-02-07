@@ -8,6 +8,7 @@ import { start } from '@utils/socket-starter'
 import { message, type IMessageFetch } from '@local_modules/whatsapp/msg-processing'
 import command from '@core/commands'
 import NodeCache from 'node-cache'
+import { ImprovedAuth } from '@local_modules/whatsapp/auth'
 
 class bot {
     private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true, maxKeys: 200, })
@@ -30,15 +31,16 @@ class bot {
         this.saveCreds = null
         this.autodie = 0
     }
-    async init(pairingCode: boolean = false, phoneNumber: string | null | undefined) {
-        const { saveCreds, state } = await useMultiFileAuthState(bot.authFile)
-        this.state = state
-        this.saveCreds = saveCreds
+    async init(pairingCode: boolean = false, phoneNumber?: string) {
+        const auth = new ImprovedAuth(bot.authFile)
+        this.state = auth.state
+        this.saveCreds = async () => auth.saveCreds()
         this.usePairingCode = pairingCode
         this.phoneNumber = phoneNumber
 
         await this.start()
     }
+
     private async start() {
         if (!this.state || !this.saveCreds) return
         this.sock = makeWASocket({
@@ -147,6 +149,7 @@ class bot {
         })
     }
     private async message(msg: IMessageFetch) {
+        logger.log('Prepare to execute command', 'INFO', 'socket')
         if (this.sock) bot.command.execute(msg, this.sock)
     }
     async checkDie() {

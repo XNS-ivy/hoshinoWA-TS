@@ -29,19 +29,44 @@ export class MessageParse {
 
         const messageObject = getContentType(m) as keyof proto.IMessage
         if (!messageObject) return null
-
         const content = res[messageObject]
-        const { text, description, caption, contextInfo, expiration } = content || {}
-        const { quotedMessage, mentionedJid } = contextInfo || {}
+        let textMsg: string | null = null
+        let caption: string | null = null
+        let description: string | null = null
+        let contextInfo: proto.IContextInfo | undefined
+        let expiration = 0
+        if (messageObject === 'conversation') {
+            textMsg = content as string
+        }
+        else if (messageObject === 'extendedTextMessage') {
+            const c = content as proto.Message.IExtendedTextMessage
+            textMsg = c.text ?? null
+            description = c.description ?? null
+            contextInfo = c.contextInfo ?? undefined
+            expiration = (c as any).expiration ?? 0
+        }
+        else {
+            const c = content as {
+                caption?: string
+                contextInfo?: proto.IContextInfo
+                expiration?: number
+            }
+            caption = c.caption ?? null
+            contextInfo = c.contextInfo ?? undefined
+            expiration = c.expiration ?? 0
+        }
+
+        const quotedMessage = contextInfo?.quotedMessage
+        const mentionedJid = contextInfo?.mentionedJid ?? []
         const chatExpiration = expiration > 0 ? expiration : 0
         const quoted = quotedMessage
             ? await this.quotedMessageFetch(quotedMessage)
             : null
         const isOnGroup = remoteJid.endsWith('@g.us') ? true : false
         const prefix = await this.config.getConfig('prefix')
-        const body = text ?? caption ?? ""
+        const body: string = textMsg ?? caption ?? ""
         let commandContent: null | { cmd: string; args: string[] } = null
-        if (body.startsWith(prefix)) {
+        if (body?.startsWith(prefix)) {
             const parts = body
                 .slice(prefix.length)
                 .trim()
@@ -62,7 +87,7 @@ export class MessageParse {
             isOnGroup,
             messageTimestamp,
             type: messageObject,
-            text,
+            text: textMsg,
             caption,
             description,
             expiration: chatExpiration,
@@ -160,3 +185,6 @@ interface IQuotedMessage {
 }
 
 export const message = new MessageParse()
+
+type MessageContent<T extends keyof proto.IMessage> =
+    proto.IMessage[T]
