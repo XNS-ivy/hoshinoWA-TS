@@ -64,8 +64,8 @@ export default {
 
         text += `Type *${prefix}${this.name} <command>* for details\n`
         text += `Type *${prefix}${this.name} usage <command>* for usage\n`
+        text += `Bot prefix : " ${prefix} "\n`
         text += `\nTotal: ${commands.length} commands`
-        text += `Bot prefix : ${prefix}`
 
         await socket.sendMessage(msg.remoteJid, { text }, { quoted: msg.raw })
     },
