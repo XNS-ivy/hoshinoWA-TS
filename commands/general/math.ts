@@ -1,40 +1,90 @@
+import { config } from '@core/bot-config'
+
 export default {
     name: "math",
     access: "regular",
-    args: ["a", "operator", "b"],
-    usage: 'math 1 <operator> 2',
+    args: ["expression"],
+    usage: [
+        'math 1 + 2',
+        'math 1 + 2 * 3',
+        'math 10 x 2 - 5 / 5'
+    ],
     async execute(args, { msg, socket }: ICTX) {
-        if (args.length < 3) {
-            await socket.sendMessage(msg.remoteJid, {
-                text: "❌ Usage: math <a> <+|-|*|/> <b>"
-            })
+        const prefix = await config.getConfig('prefix')
+
+        if (args.length < 3 || args.length % 2 === 0) {
+            await socket.sendMessage(
+                msg.remoteJid,
+                {
+                    text: `❌ Usage:\n${prefix}math <number> <operator> <number> [operator number ...]`
+                },
+                { quoted: msg.raw }
+            )
             return
         }
 
-        const a = Number(args[0])
-        const op = args[1]
-        const b = Number(args[2])
+        let result = Number(args[0])
 
-        if (isNaN(a) || isNaN(b)) {
-            await socket.sendMessage(msg.remoteJid, { text: "❌ A and B must be numbers" }, { quoted: msg.raw })
+        if (isNaN(result)) {
+            await socket.sendMessage(
+                msg.remoteJid,
+                { text: "❌ The first argument must be a number" },
+                { quoted: msg.raw }
+            )
             return
         }
 
-        let result: number
+        for (let i = 1; i < args.length; i += 2) {
+            const op = args[i]
+            const next = Number(args[i + 1])
 
-        switch (op) {
-            case "+": result = a + b; break
-            case "-": result = a - b; break
-            case "*":
-            case "x": result = a * b; break
-            case "/": result = b === 0 ? NaN : a / b; break
-            default:
-                await socket.sendMessage(msg.remoteJid, { text: "❌ Invalid operator" }, { quoted: msg.raw })
+            if (isNaN(next)) {
+                await socket.sendMessage(
+                    msg.remoteJid,
+                    { text: `❌ "${args[i + 1]}" Not a number` },
+                    { quoted: msg.raw }
+                )
                 return
+            }
+
+            switch (op) {
+                case "+":
+                    result += next
+                    break
+                case "-":
+                    result -= next
+                    break
+                case "*":
+                case "x":
+                    result *= next
+                    break
+                case "/":
+                    if (next === 0) {
+                        await socket.sendMessage(
+                            msg.remoteJid,
+                            { text: "❌ Cannot be divided by 0" },
+                            { quoted: msg.raw }
+                        )
+                        return
+                    }
+                    result /= next
+                    break
+                default:
+                    await socket.sendMessage(
+                        msg.remoteJid,
+                        { text: `❌ Invalid operator: ${op}` },
+                        { quoted: msg.raw }
+                    )
+                    return
+            }
         }
 
-        await socket.sendMessage(msg.remoteJid, {
-            text: `🧮 Result: ${a} ${op} ${b} = ${result}`
-        }, { quoted: msg.raw })
+        await socket.sendMessage(
+            msg.remoteJid,
+            {
+                text: `🧮 Result:\n${args.join(" ")} = ${result}`
+            },
+            { quoted: msg.raw }
+        )
     }
 } as ICommand

@@ -1,16 +1,20 @@
 import ffmpeg from 'fluent-ffmpeg'
 import fs from 'fs'
-import { writeFile, unlink } from 'fs/promises'
+import { writeFile, unlink, readFile } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import path from 'path'
 import os from 'os'
+import { writeExif } from './exif'
 
 type AnimatedStickerOptions = {
   crop?: boolean
   fps?: number
   quality?: number
   duration?: number
+  packname?: string
+  publisher?: string
 }
+
 export async function gifToMP4(input: string, output: string): Promise<void> {
   return new Promise((resolve, reject) => {
     ffmpeg(input)
@@ -72,7 +76,6 @@ export async function makeAnimatedSticker(
   buffer: Buffer,
   opt: AnimatedStickerOptions = {}
 ): Promise<Buffer> {
-//  need to add sticker pack name
   const id = randomUUID()
   const tmpDir = os.tmpdir()
   const input = path.join(tmpDir, `${id}.mp4`)
@@ -82,6 +85,8 @@ export async function makeAnimatedSticker(
   const quality = opt.quality ?? 80
   const duration = opt.duration ?? 3
   const crop = opt.crop ?? false
+  const packname = opt.packname ?? 'hoshino bot'
+  const publisher = opt.publisher ?? 'XNS-ivy'
 
   await writeFile(input, buffer)
 
@@ -103,10 +108,14 @@ export async function makeAnimatedSticker(
       .save(output)
   })
 
-  const webp = await Bun.file(output).arrayBuffer()
+  let webpBuffer = await readFile(output)
+
+  if (packname || publisher) {
+    webpBuffer = Buffer.from(await writeExif(webpBuffer, packname, publisher))
+  }
 
   await unlink(input)
   await unlink(output)
 
-  return Buffer.from(webp)
+  return webpBuffer
 }

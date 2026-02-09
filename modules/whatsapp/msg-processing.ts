@@ -11,12 +11,16 @@ export class MessageParse {
     private config = conf
 
     async fetch(msg: WAMessage): Promise<IMessageFetch | null> {
+
         const { key, pushName, message } = msg
+        const rawMessage = unwrapMessage(message as proto.IMessage)
         const { remoteJid } = key
         const lid = this.getLID(key)
         const messageTimestamp = Date.now()
+
         if (!message || !pushName) return null
         if (remoteJid === "status@broadcast" || !remoteJid) return null
+        if (!rawMessage) return null
 
         const m = message as proto.IMessage
         const res: Partial<Record<keyof proto.IMessage, any>> = {}
@@ -27,9 +31,10 @@ export class MessageParse {
             }
         }
 
-        const messageObject = getContentType(m) as keyof proto.IMessage
+        const messageObject = getContentType(rawMessage) as keyof proto.IMessage
         if (!messageObject) return null
         const content = res[messageObject]
+        if (!content) return null
         let textMsg: string | null = null
         let caption: string | null = null
         let description: string | null = null
@@ -51,9 +56,9 @@ export class MessageParse {
                 contextInfo?: proto.IContextInfo
                 expiration?: number
             }
-            caption = c.caption ?? null
-            contextInfo = c.contextInfo ?? undefined
-            expiration = c.expiration ?? 0
+            caption = c?.caption ?? null
+            contextInfo = c?.contextInfo ?? undefined
+            expiration = c?.expiration ?? 0
         }
 
         const quotedMessage = contextInfo?.quotedMessage
@@ -186,5 +191,20 @@ interface IQuotedMessage {
 
 export const message = new MessageParse()
 
-type MessageContent<T extends keyof proto.IMessage> =
-    proto.IMessage[T]
+type MessageContent<T extends keyof proto.IMessage> = proto.IMessage[T]
+
+
+function unwrapMessage(msg: proto.IMessage | undefined | null): proto.IMessage | null {
+    if (!msg) return null
+    
+    if (msg.ephemeralMessage?.message)
+        return unwrapMessage(msg.ephemeralMessage.message)
+
+    if (msg.viewOnceMessage?.message)
+        return unwrapMessage(msg.viewOnceMessage.message)
+
+    if (msg.viewOnceMessageV2?.message)
+        return unwrapMessage(msg.viewOnceMessageV2.message)
+
+    return msg
+}

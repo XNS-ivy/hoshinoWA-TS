@@ -1,39 +1,30 @@
-import { randomUUID } from 'crypto'
+import webpmux from "node-webpmux"
 
-export function addExif(
-  webp: Buffer,
-  packname = 'Sticker Bot',
-  author = 'Bot',
-  emojis: string[] = []
-) {
-  const exifAttr = {
-    'sticker-pack-id': randomUUID(),
-    'sticker-pack-name': packname,
-    'sticker-pack-publisher': author,
-    emojis
-  }
-
-  const json = Buffer.from(JSON.stringify(exifAttr), 'utf-8')
-
-  const exif = Buffer.concat([
-    Buffer.from([
-      0x49, 0x49, 0x2A, 0x00,
-      0x08, 0x00, 0x00, 0x00,
-      0x01, 0x00,
-      0x41, 0x57,
-      0x07, 0x00,
-      json.length, 0x00, 0x00, 0x00,
-      0x16, 0x00, 0x00, 0x00
-    ]),
-    json
-  ])
-
-  exif.writeUInt32LE(json.length, 14)
-  return Buffer.concat([
-    webp.slice(0, 12),
-    Buffer.from('EXIF'),
-    Buffer.alloc(4),
-    exif,
-    webp.slice(12)
-  ])
+/**
+ * Write EXIF metadata to WebP sticker
+ * @param media - Buffer or filepath of webp image
+ * @param packname - Sticker pack name
+ * @param publisher - Sticker pack publisher/author
+ * @returns Buffer with EXIF data
+ */
+export async function writeExif(
+  media: Buffer | string,
+  packname: string = "",
+  publisher: string = ""
+): Promise<Buffer> {
+  const stringJson = JSON.stringify({
+    "sticker-pack-name": packname,
+    "sticker-pack-publisher": publisher,
+    "emojis": [""]
+  })
+  
+  const exifAttr = Buffer.from('SUkqAAgAAAABAEFXBwAAAAAAFgAAAA==', 'base64')
+  const jsonBuff = Buffer.from(stringJson, "utf8")
+  const exif = Buffer.concat([exifAttr, jsonBuff])
+  exif.writeUIntLE(jsonBuff.length, 14, 4)
+  
+  const img = new webpmux.Image()
+  await img.load(media)
+  img.exif = exif
+  return Buffer.from(await img.save(null))
 }

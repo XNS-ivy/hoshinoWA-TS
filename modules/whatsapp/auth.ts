@@ -15,7 +15,6 @@ export class ImprovedAuth {
     private keyDirPath: string
     private cache: NodeCache
     private creds: any
-    private logger = logger
     private timers: Record<string, any> = {}
 
     constructor(baseDir: `./${string}` | string = './auth') {
