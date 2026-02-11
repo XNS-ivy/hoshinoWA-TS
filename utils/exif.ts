@@ -9,9 +9,10 @@ import webpmux from "node-webpmux"
  */
 export async function writeExif(
   media: Buffer | string,
-  packname: string = "",
-  publisher: string = ""
+  packname: string | null = "hoshino :3",
+  publisher: string | null = "XNS-ivy"
 ): Promise<Buffer> {
+
   const stringJson = JSON.stringify({
     "sticker-pack-name": packname,
     "sticker-pack-publisher": publisher,

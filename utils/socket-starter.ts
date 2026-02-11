@@ -15,7 +15,7 @@ export async function socketStopper() {
 }
 
 function connectionMethod() {
-    const phoneNumber = process.env.P_NUMBER ? process.env.P_NUMBER : null
+    const phoneNumber = process.env.P_NUMBER ? process.env.P_NUMBER : undefined
     const isPairingCode = !!phoneNumber
 
     return {

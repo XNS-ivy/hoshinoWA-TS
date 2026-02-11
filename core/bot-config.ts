@@ -8,16 +8,24 @@ const filepath = path.resolve(__dirname, "../databases/bot-configs.json")
 class BotConfigs {
     private static filepath = filepath
     private data!: IBotConfigSchema
-    
+
     async init() {
+        const defaults = this.defaultConfig()
+
         if (!fs.existsSync(BotConfigs.filepath)) {
-            this.data = await this.defaultConfig()
+            this.data = defaults
             this.saveConfig()
             return
         }
-
         const raw = fs.readFileSync(BotConfigs.filepath, "utf-8")
-        this.data = JSON.parse(raw) as IBotConfigSchema
+        const saved = JSON.parse(raw) as Partial<IBotConfigSchema>
+        this.data = { ...defaults, ...saved }
+        const hasNewKeys = (Object.keys(defaults) as Array<keyof IBotConfigSchema>)
+            .some(key => !(key in saved))
+
+        if (hasNewKeys) {
+            this.saveConfig()
+        }
     }
 
     async getConfig<K extends keyof IBotConfigSchema>(key: K): Promise<IBotConfigSchema[K]> {
@@ -27,12 +35,12 @@ class BotConfigs {
     async editConfig<K extends keyof IBotConfigSchema>(
         key: K,
         value: IBotConfigSchema[K]
-    ) {
+    ): Promise<void> {
         this.data[key] = value
         this.saveConfig()
     }
 
-    async saveConfig() {
+    async saveConfig(): Promise<void> {
         fs.writeFileSync(
             BotConfigs.filepath,
             JSON.stringify(this.data, null, 2),
@@ -40,12 +48,8 @@ class BotConfigs {
         )
     }
 
-    private async defaultConfig(): Promise<IBotConfigSchema> {
-        return {
-            name: bot.name,
-            prefix: bot.prefix,
-            version: bot.version,
-        }
+    private defaultConfig(): IBotConfigSchema {
+        return { ...bot }
     }
 }
 

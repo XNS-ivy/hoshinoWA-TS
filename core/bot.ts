@@ -1,4 +1,4 @@
-import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } from 'baileys'
+import { makeWASocket, DisconnectReason, Browsers } from 'baileys'
 import type { WASocket, AuthenticationState } from 'baileys'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
@@ -65,6 +65,7 @@ class bot {
                 for (const msg of messages) {
                     const chat = await message.fetch(msg)
                     if (chat) {
+                        // console.log(chat)
                         logger.log('Got Notify Message!', 'INFO', 'socket')
                         if (chat.commandContent) await this.message(chat)
                     }
@@ -148,8 +149,11 @@ class bot {
         })
     }
     private async message(msg: IMessageFetch) {
-        logger.log('Prepare to execute command', 'INFO', 'socket')
-        if (this.sock) bot.command.execute(msg, this.sock)
+        try {
+            if (this.sock) bot.command.execute(msg, this.sock)
+        } catch (e) {
+            logger.log(`Generally error executing commands : ${e}`, 'ERROR', 'socket')
+        }
     }
     async checkDie() {
         if (this.sock?.user == undefined) {

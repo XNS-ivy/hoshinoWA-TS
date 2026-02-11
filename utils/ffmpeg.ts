@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import path from 'path'
 import os from 'os'
 import { writeExif } from './exif'
+import { config } from '@core/bot-config'
 
 type AnimatedStickerOptions = {
   crop?: boolean
@@ -80,13 +81,16 @@ export async function makeAnimatedSticker(
   const tmpDir = os.tmpdir()
   const input = path.join(tmpDir, `${id}.mp4`)
   const output = path.join(tmpDir, `${id}.webp`)
-
+  const creator = {
+    packname: await config.getConfig('name'),
+    publisher: await config.getConfig('publisher'),
+  }
   const fps = opt.fps ?? 12
   const quality = opt.quality ?? 80
   const duration = opt.duration ?? 3
   const crop = opt.crop ?? false
-  const packname = opt.packname ?? 'hoshino bot'
-  const publisher = opt.publisher ?? 'XNS-ivy'
+  const packname = opt.packname ?? creator.packname
+  const publisher = opt.publisher ?? creator.publisher
 
   await writeFile(input, buffer)
 

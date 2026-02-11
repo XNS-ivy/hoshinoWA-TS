@@ -1,5 +1,6 @@
 import sharp from 'sharp'
 import { writeExif } from './exif'
+import { config } from '@core/bot-config'
 
 type StickerOptions = {
     crop?: boolean
@@ -12,10 +13,16 @@ export async function makeSticker(
     buffer: Buffer,
     opt: StickerOptions = {}
 ): Promise<Buffer> {
-    const quality = opt.quality ?? 80
-    const packname = opt.packname ?? 'hoshino-bot'
-    const publisher = opt.publisher ?? 'XNS-ivy'
+
+    const creator = {
+        packname: await config.getConfig('name'),
+        publisher: await config.getConfig('publisher'),
+    }
     
+    const quality = opt.quality ?? 80
+    const packname = opt.packname ?? creator.packname
+    const publisher = opt.publisher ?? creator.publisher
+
     const image = sharp(buffer)
     const meta = await image.metadata()
 
