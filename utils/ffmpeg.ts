@@ -7,13 +7,40 @@ import os from 'os'
 import { writeExif } from './exif'
 import { config } from '@core/bot-config'
 
-type AnimatedStickerOptions = {
+export type AnimatedStickerOptions = {
   crop?: boolean
   fps?: number
   quality?: number
   duration?: number
   packname?: string
   publisher?: string
+}
+
+type VideoMeta = {
+  fps: number
+  duration: number
+}
+
+function getVideoMeta(filePath: string): Promise<VideoMeta> {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, data) => {
+      if (err) return reject(err)
+
+      const videoStream = data.streams.find(s => s.codec_type === 'video')
+      const duration = data.format.duration ?? 0
+      let fps = 12
+      const rateStr = videoStream?.r_frame_rate ?? videoStream?.avg_frame_rate
+      if (rateStr) {
+        const [num, den] = rateStr.split('/').map(Number)
+        if (num && den && den > 0) fps = Math.round(num / den)
+      }
+
+      resolve({
+        fps: fps,
+        duration: Number(duration)
+      })
+    })
+  })
 }
 
 export async function gifToMP4(input: string, output: string): Promise<void> {
@@ -62,6 +89,7 @@ export async function validateGif(path: string): Promise<void> {
   if (tail[0] !== 0x3B) {
     throw new Error('GIF missing trailer')
   }
+
   await new Promise<void>((resolve, reject) => {
     ffmpeg.ffprobe(path, (err, data) => {
       if (err) return reject(err)
@@ -81,18 +109,30 @@ export async function makeAnimatedSticker(
   const tmpDir = os.tmpdir()
   const input = path.join(tmpDir, `${id}.mp4`)
   const output = path.join(tmpDir, `${id}.webp`)
+
   const creator = {
     packname: await config.getConfig('name'),
     publisher: await config.getConfig('publisher'),
   }
-  const fps = opt.fps ?? 12
+
+  await writeFile(input, buffer)
+
+  // Baca metadata dari source video
+  const meta = await getVideoMeta(input)
+
   const quality = opt.quality ?? 80
-  const duration = opt.duration ?? 3
   const crop = opt.crop ?? false
   const packname = opt.packname ?? creator.packname
   const publisher = opt.publisher ?? creator.publisher
 
-  await writeFile(input, buffer)
+  // Pakai fps source, user tidak bisa override
+  const fps = meta.fps
+
+  // Jika user set duration, pastikan tidak melebihi duration source
+  // Jika tidak di-set, pakai duration source
+  const duration = opt.duration
+    ? Math.min(opt.duration, meta.duration)
+    : meta.duration
 
   const vf = crop
     ? `crop=min(iw\\,ih):min(iw\\,ih),scale=512:512,fps=${fps}`

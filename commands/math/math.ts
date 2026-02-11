@@ -9,6 +9,7 @@ export default {
         'math 1 + 2 * 3',
         'math 10 x 2 - 5 / 5'
     ],
+    category: 'math',
     async execute(args, { msg, socket }: ICTX) {
         const prefix = await config.getConfig('prefix')
 

@@ -1,5 +1,11 @@
+import fs from 'fs'
+import path from 'path'
+
+const bannerPath = path.resolve(__dirname, '../../media/images/hoshino-banner.jpeg')
+
 import commandHandler from '@core/commands'
 import { config } from '@core/bot-config'
+
 export default {
     name: 'menu',
     access: 'regular',
@@ -14,6 +20,7 @@ export default {
         const cmdMap = new Map(
             commands.map(c => [c.name, c])
         )
+
         if (args.length === 1 && args[0]) {
             const target = cmdMap.get(args[0])
             if (!target) {
@@ -45,21 +52,25 @@ export default {
 
         const map = new Map<string, ICommand[]>()
         for (const cmd of commands) {
-            const key = cmd.access ?? 'regular'
+            const key = cmd.category ?? cmd.access ?? 'general'
             if (!map.has(key)) map.set(key, [])
             map.get(key)!.push(cmd)
         }
 
+        const sortedMap = new Map(
+            [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+        )
+
         let text = `📜 *BOT MENU*\n\n`
 
-        for (const [access, cmds] of map) {
-            text += `${accessLabel(access as ICommand['access'])}\n`
+        for (const [category, cmds] of sortedMap) {
+            const sorted = cmds.sort((a, b) => a.name.localeCompare(b.name))
 
-            for (const c of cmds) {
-                text += `• ${prefix}${c.name}\n`
+            text += `╔ 📁 *${category.toUpperCase()}*\n`
+            for (const c of sorted) {
+                text += `║ • ${prefix}${c.name}\n`
             }
-
-            text += '\n'
+            text += `╚══════════\n\n`
         }
 
         text += `Type *${prefix}${this.name} <command>* for details\n`
@@ -67,19 +78,29 @@ export default {
         text += `Bot prefix : " ${prefix} "\n`
         text += `\nTotal: ${commands.length} commands`
 
-        await socket.sendMessage(msg.remoteJid, { text }, { quoted: msg.raw })
+        const thumbnail = fs.existsSync(bannerPath)
+            ? fs.readFileSync(bannerPath)
+            : undefined
+
+        await socket.sendMessage(
+            msg.remoteJid,
+            {
+                text,
+                contextInfo: {
+                    externalAdReply: {
+                        title: await config.getConfig('name') ?? 'Hoshino Bot',
+                        body: `Prefix: " ${prefix} " • ${commands.length} Commands Online`,
+                        mediaType: 1,
+                        showAdAttribution: true,
+                        renderLargerThumbnail: true,
+                        thumbnail,
+                    }
+                }
+            },
+            { quoted: msg.raw }
+        )
     },
 } as ICommand
-
-function accessLabel(access?: ICommand['access']) {
-    switch (access) {
-        case 'owner': return '👑 Owner'
-        case 'premium': return '💎 Premium'
-        case 'regular':
-        default:
-            return '📂 General'
-    }
-}
 
 function renderUsage(
     usage: ICommand['usage'],
@@ -108,6 +129,7 @@ function renderCommandDetail(cmd: ICommand): string {
 
     lines.push(`📌 *Command:* ${cmd.name}`)
     lines.push(`🔐 *Access:* ${cmd.access ?? 'regular'}`)
+    lines.push(`📁 *Category:* ${cmd.category ?? cmd.access ?? 'general'}`)
 
     if (cmd.inGroup) {
         lines.push(`👥 *Group Only:* yes`)

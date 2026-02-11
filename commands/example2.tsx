@@ -5,6 +5,7 @@ export default {
     inGroupAccess: "member",
     args: ["args1", "args2"],
     usage: 'example2',
+    category: 'example',
     // custom: any
     async execute(args, { msg, socket, whoAMI }: ICTX) {
         await socket.sendMessage(msg.remoteJid, {

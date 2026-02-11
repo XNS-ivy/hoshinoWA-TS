@@ -1,11 +1,52 @@
 import { downloadMediaMessage } from 'baileys'
 import { makeSticker } from '@utils/sharp'
-import { makeAnimatedSticker } from '@utils/ffmpeg'
+import { makeAnimatedSticker, type AnimatedStickerOptions } from '@utils/ffmpeg'
+import type { StickerOptions } from '@utils/sharp'
+
+const ARG_MAP: Record<string, Partial<StickerOptions & AnimatedStickerOptions>> = {
+    // Static & animated
+    'crop': { crop: true },
+    'hq': { quality: 100 },
+    'lq': { quality: 50 },
+    // Static only
+    'cover': { fit: 'cover' },
+    'fill': { fit: 'fill' },
+    'contain': { fit: 'contain' },
+    'inside': { fit: 'inside' },
+    'outside': { fit: 'outside' },
+    'lossless': { lossless: true },
+    // Animated only
+    'fps8': { fps: 8 },
+    'fps12': { fps: 12 },
+    'fps15': { fps: 15 },
+    'fps24': { fps: 24 },
+    '3s': { duration: 3 },
+    '5s': { duration: 5 },
+    '8s': { duration: 8 },
+    '10s': { duration: 10 },
+}
+
+function parseArgs(args: string[]): StickerOptions & AnimatedStickerOptions {
+    const opt: StickerOptions & AnimatedStickerOptions = {}
+    for (const arg of args) {
+        const mapped = ARG_MAP[arg.toLowerCase()]
+        if (mapped) Object.assign(opt, mapped)
+    }
+    return opt
+}
 
 export default {
     name: 'sticker',
-    args: ['crop'],
-    usage: ['sticker', 'sticker crop'],
+    usage: [
+        'sticker',
+        'sticker crop',
+        'sticker crop hq',
+        'sticker cover lossless',
+        'sticker fps15 5s',
+        'sticker crop fps24 8s hq',
+    ],
+    args: Object.keys(ARG_MAP),
+    category: 'media',
     async execute(args, { msg, socket }) {
 
         let targetMsg: any = null
@@ -50,27 +91,22 @@ export default {
             { logger: { level: 'silent' } as any, reuploadRequest: socket.updateMediaMessage }
         )
 
+        const stickerOpt = parseArgs(args)
         let sticker: Buffer | null = null
 
         if (isAnimated) {
             try {
-                sticker = await makeAnimatedSticker(buffer, {
-                    crop: args[0] === 'crop'
-                })
+                sticker = await makeAnimatedSticker(buffer, stickerOpt)
             } catch (err: any) {
                 logger.log('ffmpeg failed', 'ERROR', 'sticker command')
                 try {
-                    sticker = await makeSticker(buffer, {
-                        crop: args[0] === 'crop'
-                    })
+                    sticker = await makeSticker(buffer, stickerOpt)
                 } catch (fallbackErr) {
                     logger.log(`Fallback failed : ${fallbackErr}`, 'ERROR', 'sticker command')
                 }
             }
         } else {
-            sticker = await makeSticker(buffer, {
-                crop: args[0] === 'crop'
-            })
+            sticker = await makeSticker(buffer, stickerOpt)
         }
 
         if (!sticker) {

@@ -9,6 +9,7 @@ import { isPlaceholder } from '@local_modules/any/image-placeholder-check'
 export default {
     name: 'waifupict',
     access: 'regular',
+    category: 'waifupict',
     args: [
         'waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cry', 'cuddle', 'lick',
         'pat', 'smug', 'blush', 'bonk', 'yeet', 'smile', 'wave', 'highfive',

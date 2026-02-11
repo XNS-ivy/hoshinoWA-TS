@@ -40,28 +40,31 @@ export class CommandHandling {
         logger.log(`${cmd} Executed`, 'INFO', 'command handler')
     }
     private async loadCommands(dir: string) {
-        const files = await fs.readdir(dir, { withFileTypes: true })
+    const files = await fs.readdir(dir, { withFileTypes: true })
 
-        for (const file of files) {
-            const fullPath = path.join(dir, file.name)
+    for (const file of files) {
+        const fullPath = path.join(dir, file.name)
 
-            if (file.isDirectory()) {
-                await this.loadCommands(fullPath)
-                continue
-            }
-
-            if (!file.name.match(/\.(ts|js)$/)) continue
-
-            const module = await import(
-                pathToFileURL(fullPath).href
-            )
-
-            const command = module.default as ICommand
-            if (!command?.name || typeof command.execute !== "function") continue
-
-            this.commands.set(command.name, command)
+        if (file.isDirectory()) {
+            await this.loadCommands(fullPath)
+            continue
         }
+
+        if (!file.name.match(/\.(ts|js)$/)) continue
+
+        const module = await import(pathToFileURL(fullPath).href)
+
+        const command = module.default as ICommand
+        if (!command?.name || typeof command.execute !== "function") continue
+        const relative = path.relative(this.commandPath, dir)
+        const category = relative
+            ? relative.split(path.sep)[0]
+            : 'general'
+        command.category = category ?? 'general'
+
+        this.commands.set(command.name, command)
     }
+}
     async getCommandMapOnly(
         whoAMI: { role: 'private' | 'admin' | 'member' },
         isGroup: boolean

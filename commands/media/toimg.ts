@@ -5,6 +5,7 @@ import sharp from 'sharp'
 export default {
     name: 'toimg',
     usage: 'toimg (reply image / sticker)',
+    category: 'media',
     async execute(_, { msg, socket }) {
         if (!msg.quoted) {
             return socket.sendMessage(msg.remoteJid, { text: '❌ Reply image or sticker' }, { quoted: msg.raw })

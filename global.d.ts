@@ -19,6 +19,7 @@ declare global {
         inGroupAccess?: "admin" | "member"
         args?: string[]
         usage: string | Array<string> | undefined | null | Function
+        category: string
         execute: (
             args: string[],
             ctx: ICTX

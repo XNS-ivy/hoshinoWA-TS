@@ -12,6 +12,7 @@ export default {
     args: [
         'waifu', 'neko', 'trap', 'blowjob'
     ],
+    category: 'waifupict',
     usage: 'waifupict <type>',
     async execute(args, { msg, socket }) {
         const available = Array.isArray(this.args) ? this.args : []
