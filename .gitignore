@@ -143,5 +143,10 @@ auth/
 
 # test file
 test.*
-databases/bot-configs.json
 test*.*
+
+# database
+databases/bot-configs.json
+
+# lock file
+*.lock
