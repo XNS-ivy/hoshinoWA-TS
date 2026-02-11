@@ -82,21 +82,34 @@ export default {
             ? fs.readFileSync(bannerPath)
             : undefined
 
-        await socket.sendMessage(
-            msg.remoteJid,
-            {
-                text,
-                contextInfo: {
-                    externalAdReply: {
-                        title: await config.getConfig('name') ?? 'Hoshino Bot',
-                        body: `Prefix: " ${prefix} " • ${commands.length} Commands Online`,
-                        mediaType: 1,
-                        showAdAttribution: true,
-                        renderLargerThumbnail: true,
-                        thumbnail,
-                    }
+        // await socket.sendMessage(
+        //     msg.remoteJid,
+        //     {
+        //         text,
+        //         contextInfo: {
+        //             externalAdReply: {
+        //                 title: await config.getConfig('name') ?? 'Hoshino Bot',
+        //                 body: `Prefix: " ${prefix} " • ${commands.length} Commands Online`,
+        //                 mediaType: 1,
+        //                 showAdAttribution: true,
+        //                 renderLargerThumbnail: true,
+        //                 thumbnail,
+        //             }
+        //         }
+        //     },
+        //     { quoted: msg.raw }
+        // )
+        await socket.sendMessage(msg.remoteJid, {
+            text: text, contextInfo: {
+                externalAdReply: {
+                    mediaType: 1,
+                    renderLargerThumbnail: true,
+                    thumbnail,
+                    title: await config.getConfig('name') ?? 'Hoshino Bot',
+                    body: `Prefix: " ${prefix} " • ${commands.length} Commands Online`,
                 }
-            },
+            }
+        },
             { quoted: msg.raw }
         )
     },

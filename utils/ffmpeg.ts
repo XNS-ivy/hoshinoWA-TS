@@ -116,41 +116,77 @@ export async function makeAnimatedSticker(
   }
 
   await writeFile(input, buffer)
-
-  // Baca metadata dari source video
   const meta = await getVideoMeta(input)
+
+  const MAX_DURATION = 8
+  const MIN_FPS = 8
+  const MAX_FPS = 30
+  const MAX_SIZE_KB = 900 
 
   const quality = opt.quality ?? 80
   const crop = opt.crop ?? false
   const packname = opt.packname ?? creator.packname
   const publisher = opt.publisher ?? creator.publisher
 
-  // Pakai fps source, user tidak bisa override
-  const fps = meta.fps
-
-  // Jika user set duration, pastikan tidak melebihi duration source
-  // Jika tidak di-set, pakai duration source
+  const fps = Math.min(Math.max(meta.fps, MIN_FPS), MAX_FPS)
   const duration = opt.duration
-    ? Math.min(opt.duration, meta.duration)
-    : meta.duration
+    ? Math.min(opt.duration, meta.duration, MAX_DURATION)
+    : Math.min(meta.duration, MAX_DURATION)
 
-  const vf = crop
-    ? `crop=min(iw\\,ih):min(iw\\,ih),scale=512:512,fps=${fps}`
-    : `scale=512:512:force_original_aspect_ratio=decrease,fps=${fps},pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000`
+  const buildVf = (f: number) => {
+    const filters: string[] = []
+    if (crop) filters.push('crop=min(iw\\,ih):min(iw\\,ih)')
+    filters.push(`scale=512:512${crop ? '' : ':force_original_aspect_ratio=decrease'}`)
+    filters.push(`fps=${f}`)
+    if (!crop) filters.push('pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000')
+    return filters.join(',')
+  }
 
-  await new Promise<void>((resolve, reject) => {
+  const runFfmpeg = (vf: string, q: number, d: number) => new Promise<void>((resolve, reject) => {
     ffmpeg(input)
       .noAudio()
-      .inputOptions([`-t ${duration}`])
       .outputOptions([
         '-vf', vf,
         '-loop', '0',
-        '-quality', String(quality)
+        '-qscale', String(q),
+        '-t', String(d),
       ])
       .on('end', () => resolve())
-      .on('error', reject)
+      .on('error', (err) => {
+        logger.log(`ffmpeg error: ${err.message}`, 'ERROR', 'ffmpeg')
+        reject(err)
+      })
       .save(output)
   })
+
+  let currentFps = fps
+  let currentQuality = quality
+  await runFfmpeg(buildVf(currentFps), currentQuality, duration)
+  let stat = await fs.promises.stat(output)
+
+  if (stat.size / 1024 > MAX_SIZE_KB) {
+    currentQuality = 60
+    await runFfmpeg(buildVf(currentFps), currentQuality, duration)
+    stat = await fs.promises.stat(output)
+  }
+
+  if (stat.size / 1024 > MAX_SIZE_KB) {
+    currentFps = Math.max(Math.floor(fps * 0.2), MIN_FPS)
+    currentQuality = 50
+    await runFfmpeg(buildVf(currentFps), currentQuality, duration)
+    stat = await fs.promises.stat(output)
+  }
+
+  if (stat.size / 1024 > MAX_SIZE_KB) {
+    const reducedDuration = Math.min(duration * 0.6, duration)
+    currentQuality = 40
+    await runFfmpeg(buildVf(currentFps), currentQuality, reducedDuration)
+    stat = await fs.promises.stat(output)
+  }
+
+  if (stat.size < 1024) {
+    throw new Error(`Output webp too small (${stat.size} bytes), likely corrupt`)
+  }
 
   let webpBuffer = await readFile(output)
 

@@ -23,7 +23,6 @@ const ARG_MAP: Record<string, Partial<StickerOptions & AnimatedStickerOptions>> 
     '3s': { duration: 3 },
     '5s': { duration: 5 },
     '8s': { duration: 8 },
-    '10s': { duration: 10 },
 }
 
 function parseArgs(args: string[]): StickerOptions & AnimatedStickerOptions {
