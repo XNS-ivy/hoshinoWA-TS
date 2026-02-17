@@ -1,24 +1,53 @@
 import { youtube } from "btch-downloader"
-import { Buffer } from 'node:buffer'
+import { Buffer } from "node:buffer"
+
 export default {
     name: 'ytmp3',
     category: 'downloader',
     async execute(args, { msg, socket }) {
-        if (!args[0]) {
-            socket.sendMessage(msg.remoteJid, { text: 'Please provide the YouTube link.' }, { quoted: msg.raw })
-            return
-        }
-        try {
-            const url = await youtube(args[0])
-            if (!url?.mp3) {
-                throw new Error('Unvailable')
-            }
-            const res = await fetch(url.mp3)
-            const arrayBuffer = res
-            const buffer = Buffer.from()
-            socket.sendMessage(msg.remoteJid, { audio: })
-        } catch (error) {
 
+        if (!args[0]) {
+            return socket.sendMessage(
+                msg.remoteJid,
+                { text: '❌ Please provide the YouTube link.' },
+                { quoted: msg.raw }
+            )
+        }
+
+        try {
+            socket.sendMessage(msg.remoteJid, { text: '🔄 Downloading process is underway, please wait a moment.' }, { quoted: msg.raw })
+            const data = await youtube(args[0])
+
+            if (!data?.mp3) {
+                throw new Error('MP3 unavailable')
+            }
+
+            const res = await fetch(data.mp3)
+
+            if (!res.ok) {
+                throw new Error(`Fetch failed: ${res.status}`)
+            }
+
+            const arrayBuffer = await res.arrayBuffer()
+            const buffer = Buffer.from(arrayBuffer)
+            socket.sendMessage(msg.remoteJid, { text: '⬆️ Uploading....' }, { quoted: msg.raw })
+            await socket.sendMessage(
+                msg.remoteJid,
+                {
+                    audio: buffer,
+                    mimetype: 'audio/mpeg',
+                    fileName: 'ytmp3.mp3'
+                },
+                { quoted: msg.raw }
+            )
+
+        } catch (err) {
+            logger.log(err as string, 'ERROR', 'ytmp3')
+            socket.sendMessage(
+                msg.remoteJid,
+                { text: '❌ Failed to download audio.' },
+                { quoted: msg.raw }
+            )
         }
     },
 } as ICommand
