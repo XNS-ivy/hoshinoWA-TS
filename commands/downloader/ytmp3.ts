@@ -4,6 +4,7 @@ import { Buffer } from "node:buffer"
 export default {
     name: 'ytmp3',
     category: 'downloader',
+    usage: 'ytmp3 <links>',
     async execute(args, { msg, socket }) {
 
         if (!args[0]) {
@@ -30,7 +31,6 @@ export default {
 
             const arrayBuffer = await res.arrayBuffer()
             const buffer = Buffer.from(arrayBuffer)
-            socket.sendMessage(msg.remoteJid, { text: '⬆️ Uploading....' }, { quoted: msg.raw })
             await socket.sendMessage(
                 msg.remoteJid,
                 {
