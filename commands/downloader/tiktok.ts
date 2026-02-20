@@ -2,7 +2,7 @@ import { ttdl } from 'btch-downloader'
 import { Buffer } from "node:buffer"
 
 export default {
-    name: 'tiktok',
+    name: 'ttdownload',
     category: 'downloader',
     usage: 'tiktok <links>',
     async execute(args, { msg, socket }) {
@@ -47,7 +47,6 @@ export default {
                 { quoted: msg.raw }
             )
 
-            // Kirim audio juga kalau ada
             if (audioUrl) {
                 const audioRes = await fetch(audioUrl)
                 if (audioRes.ok) {

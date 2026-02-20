@@ -1,15 +1,15 @@
-import { ttdl } from 'btch-downloader'
+import { igdl } from 'btch-downloader'
 import { Buffer } from "node:buffer"
 
 export default {
-    name: 'tiktok',
+    name: 'igdownload',
     category: 'downloader',
-    usage: 'tiktok <links>',
+    usage: 'igdownload <links>',
     async execute(args, { msg, socket }) {
         if (!args[0]) {
             return socket.sendMessage(
                 msg.remoteJid,
-                { text: '❌ Please provide the TikTok link.' },
+                { text: '❌ Please provide the Instagram link.' },
                 { quoted: msg.raw }
             )
         }
@@ -21,44 +21,50 @@ export default {
                 { quoted: msg.raw }
             )
 
-            const data = await ttdl(args[0])
+            const data = await igdl(args[0])
 
-            if (!data?.status) throw new Error('Failed to fetch TikTok data')
+            if (!data?.result || data.result.length === 0) {
+                throw new Error('No media found')
+            }
 
-            const videoUrl = data.video?.[0]
-            const audioUrl = data.audio?.[0]
-            const mediaUrl = videoUrl ?? audioUrl
+            for (const item of data.result) {
+                if (!item?.url) continue
 
-            if (!mediaUrl) throw new Error('No media URL found')
-
-            const res = await fetch(mediaUrl)
-            if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
-
-            const buffer = Buffer.from(await res.arrayBuffer())
-            const isVideo = !!videoUrl
-
-            await socket.sendMessage(
-                msg.remoteJid,
-                isVideo
-                    ? {
-                        video: buffer,
-                        mimetype: 'video/mp4',
-                        fileName: `${data.title ?? 'tiktok'}.mp4`,
-                        caption: data.title ?? ''
-                    }
-                    : {
-                        audio: buffer,
-                        mimetype: 'audio/mpeg',
-                        fileName: `${data.title_audio ?? 'tiktok_audio'}.mp3`
+                const res = await fetch(item.url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     },
-                { quoted: msg.raw }
-            )
+                    redirect: 'follow'
+                })
+
+                if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
+
+                const arrayBuffer = await res.arrayBuffer()
+                const buffer = Buffer.from(arrayBuffer)
+
+                // Deteksi dari URL karena content-type-nya octet-stream
+                const isVideo = item.url.includes('.mp4') || item.thumbnail !== undefined
+
+                await socket.sendMessage(
+                    msg.remoteJid,
+                    isVideo
+                        ? {
+                            video: buffer,
+                            mimetype: 'video/mp4',
+                            fileName: 'igdownload.mp4'
+                        }
+                        : {
+                            image: buffer,
+                        },
+                    { quoted: msg.raw }
+                )
+            }
 
         } catch (err) {
-            logger.log(err as string, 'ERROR', 'tiktok')
+            logger.log(err as string, 'ERROR', 'igdownload')
             socket.sendMessage(
                 msg.remoteJid,
-                { text: '❌ Failed to download video.' },
+                { text: '❌ Failed to download media.' },
                 { quoted: msg.raw }
             )
         }
