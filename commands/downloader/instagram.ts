@@ -42,7 +42,6 @@ export default {
                 const arrayBuffer = await res.arrayBuffer()
                 const buffer = Buffer.from(arrayBuffer)
 
-                // Deteksi dari URL karena content-type-nya octet-stream
                 const isVideo = item.url.includes('.mp4') || item.thumbnail !== undefined
 
                 await socket.sendMessage(

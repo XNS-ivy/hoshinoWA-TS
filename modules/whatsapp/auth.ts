@@ -36,10 +36,11 @@ export class ImprovedAuth {
     private loadAuth(file: string) {
         try {
             if (fs.existsSync(file)) {
-                return JSON.parse(fs.readFileSync(file, 'utf-8'), BufferJSON.reviver)
+                const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'), BufferJSON.reviver)
+                if (parsed) return parsed
             }
         } catch (e) {
-            logger.log(`Failed to read ${file}`, 'INFO', 'auth')
+            logger.log(`Failed to read ${file}: ${e}`, 'WARN', 'auth')
         }
         return null
     }
@@ -70,7 +71,13 @@ export class ImprovedAuth {
     private isNullLike(v: any) {
         return v === null || v === undefined
     }
-    saveCreds = () => this.saveAuth(this.credsPath, this.creds)
+    saveCreds = async (): Promise<void> => {
+        try {
+            this.saveAuth(this.credsPath, this.creds)
+        } catch (e) {
+            logger.log(`Failed to save creds: ${e}`, 'ERROR', 'auth')
+        }
+    }
 
     keys: AuthenticationState['keys'] = {
         get: async <T extends keyof SignalDataTypeMap>(type: T, ids: string[]) => {
@@ -121,7 +128,7 @@ export class ImprovedAuth {
                         } catch (e) {
                             logger.log(`Failed to save key ${safeKey}`, 'ERROR', 'auth')
                         }
-                    }, 300)
+                    }, 0)
                 }
             }
         }
