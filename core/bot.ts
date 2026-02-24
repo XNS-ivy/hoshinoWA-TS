@@ -1,4 +1,4 @@
-import { makeWASocket, DisconnectReason, Browsers } from 'baileys'
+import { makeWASocket, DisconnectReason, Browsers, useMultiFileAuthState } from 'baileys'
 import type { WASocket, AuthenticationState } from 'baileys'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
@@ -32,6 +32,7 @@ class bot {
         this.autodie = 0
     }
     async init(pairingCode: boolean = false, phoneNumber?: string) {
+        // const auth = await useMultiFileAuthState(bot.authFile)
         const auth = new ImprovedAuth(bot.authFile)
         this.state = auth.state
         this.saveCreds = async () => auth.saveCreds()
@@ -131,6 +132,13 @@ class bot {
                             await start()
                             break
                         default:
+                            if (this.autodie < bot.maxAutoDie) {
+                                logger.log(`Unknown disconnect (${disconnected}), attempting reconnect...`, 'WARN', 'socket')
+                                await start()
+                            } else {
+                                logger.log('Max reconnect attempts reached', 'FATAL', 'socket')
+                                setTimeout(() => process.exit(1), 500)
+                            }
                             break
                     }
                     break

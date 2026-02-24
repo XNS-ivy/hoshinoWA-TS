@@ -45,13 +45,9 @@ export class ImprovedAuth {
         return null
     }
 
-    private loadJSON(file: string) {
-        return JSON.parse(fs.readFileSync(file, 'utf-8'))
-    }
-
     private saveJSON(file: string, data: any) {
         fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file + '.tmp', JSON.stringify(data, null, 2))
+        fs.writeFileSync(file + '.tmp', JSON.stringify(data, BufferJSON.replacer, 2))
         fs.renameSync(file + '.tmp', file)
     }
 
@@ -89,7 +85,12 @@ export class ImprovedAuth {
 
                 const file = path.join(this.keysDir, `${safeKey}.json`)
                 if (!value && fs.existsSync(file)) {
-                    try { value = this.loadJSON(file) as SignalDataTypeMap[T] } catch { /* ignore */ }
+                    try {
+                        value = JSON.parse(
+                            fs.readFileSync(file, 'utf-8'),
+                            BufferJSON.reviver
+                        ) as SignalDataTypeMap[T]
+                    } catch { /* ignore */ }
                     if (value) this.cache.set(safeKey, value)
                 }
 
