@@ -1,10 +1,10 @@
-const command: ICommand = {
-    name: "example",
-    access: "owner",
+export default {
+    name: 'example2',
+    access: "premium",
     inGroup: true,
     inGroupAccess: "member",
     args: ["args1", "args2"],
-    usage: `example`,
+    usage: 'example2',
     category: 'example',
     // custom: any
     async execute(args, { msg, socket, whoAMI }: ICTX) {
@@ -12,8 +12,7 @@ const command: ICommand = {
             text: `Command example running\nArgs: ${args.join(", ")}`
         })
     }
-}
+} as ICommand
 
-export default command
-
+// this type example is works and safe fr
 // please dont judge me because its just example of my commands :(

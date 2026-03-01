@@ -11,7 +11,9 @@ import NodeCache from 'node-cache'
 import { ImprovedAuth } from '@local_modules/whatsapp/auth'
 import { convertLID } from '@local_modules/whatsapp/msg-processing'
 import { ownerHandler } from "@core/owner"
+
 class bot {
+    private tradeNotifInterval: Timer | null = null
     private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true, maxKeys: 200, })
     private sock: null | WASocket
     private usePairingCode: boolean
@@ -111,42 +113,55 @@ class bot {
             switch (connection) {
                 case 'open':
                     logger.log(`Connected With : ${this.sock?.user?.name} Lid : ${convertLID(this.sock?.user?.lid ?? null)}`, 'INFO', 'socket')
-                    if (this.sock) await ownerHandler.init(this.sock)
-                    break
-                case 'close': {
-                    const disconnected = (lastDisconnect?.error && 'output' in lastDisconnect.error)
-                        ? (lastDisconnect.error as Boom).output?.statusCode
-                        : undefined
-                    logger.log(`Disconnected : ${lastDisconnect?.error?.message}`, 'WARN', 'socket')
-
-                    switch (disconnected) {
-                        case DisconnectReason.loggedOut:
-                        case DisconnectReason.forbidden:
-                            logger.log('Deleting Socket Creds', 'WARN', 'socket')
-                            fs.rmSync(bot.authFile, { recursive: true, force: true })
-                            setTimeout(async () => { await start() }, 1000)
-                            break
-                        case DisconnectReason.restartRequired:
-                        case DisconnectReason.connectionLost:
-                        case DisconnectReason.unavailableService:
-                        case DisconnectReason.connectionClosed:
-                        case DisconnectReason.multideviceMismatch:
-                        case DisconnectReason.connectionReplaced:
-                        case DisconnectReason.badSession:
-                            await start()
-                            break
-                        default:
-                            if (this.autodie < bot.maxAutoDie) {
-                                logger.log(`Unknown disconnect (${disconnected}), attempting reconnect...`, 'WARN', 'socket')
-                                await start()
-                            } else {
-                                logger.log('Max reconnect attempts reached', 'FATAL', 'socket')
-                                setTimeout(() => process.exit(1), 500)
-                            }
-                            break
+                    if (this.sock) {
+                        await ownerHandler.init(this.sock)
+                        try {
+                            const { cryptoTrade } = await import('./minigames/cryptoTrade')
+                            const allOwners = await ownerHandler.getAll()
+                            await cryptoTrade.initOwnerWallets(allOwners)
+                            logger.log('CryptoTrade owner wallets initialized', 'INFO', 'cryptotrade')
+                        } catch (err: any) {
+                            logger.log(`CryptoTrade init failed: ${err?.message}`, 'WARN', 'cryptotrade')
+                        }
+                        this.startTradeNotifLoop()
                     }
                     break
-                }
+                case 'close':
+                    this.stopTradeNotifLoop()
+                    {
+                        const disconnected = (lastDisconnect?.error && 'output' in lastDisconnect.error)
+                            ? (lastDisconnect.error as Boom).output?.statusCode
+                            : undefined
+                        logger.log(`Disconnected : ${lastDisconnect?.error?.message}`, 'WARN', 'socket')
+
+                        switch (disconnected) {
+                            case DisconnectReason.loggedOut:
+                            case DisconnectReason.forbidden:
+                                logger.log('Deleting Socket Creds', 'WARN', 'socket')
+                                fs.rmSync(bot.authFile, { recursive: true, force: true })
+                                setTimeout(async () => { await start() }, 1000)
+                                break
+                            case DisconnectReason.restartRequired:
+                            case DisconnectReason.connectionLost:
+                            case DisconnectReason.unavailableService:
+                            case DisconnectReason.connectionClosed:
+                            case DisconnectReason.multideviceMismatch:
+                            case DisconnectReason.connectionReplaced:
+                            case DisconnectReason.badSession:
+                                await start()
+                                break
+                            default:
+                                if (this.autodie < bot.maxAutoDie) {
+                                    logger.log(`Unknown disconnect (${disconnected}), attempting reconnect...`, 'WARN', 'socket')
+                                    await start()
+                                } else {
+                                    logger.log('Max reconnect attempts reached', 'FATAL', 'socket')
+                                    setTimeout(() => process.exit(1), 500)
+                                }
+                                break
+                        }
+                        break
+                    }
                 case 'connecting':
                     this.autodie = 0
                     if (this.sock?.user == undefined) {
@@ -173,6 +188,36 @@ class bot {
                 logger.log('Terminate Program Because No Connection To Whatapp Socket', 'FATAL', 'socket')
                 setTimeout(() => { process.exit(1) }, 500)
             }
+        }
+    }
+    private async startTradeNotifLoop() {
+        if (this.tradeNotifInterval) return
+        const { cryptoTrade } = await import('./minigames/cryptoTrade')
+        this.tradeNotifInterval = setInterval(async () => {
+            if (!this.sock) return
+            try {
+                const coins = await cryptoTrade.getCoins()
+                for (const coin of coins) {
+                    const notifications = await cryptoTrade.checkAlerts(coin.id)
+                    for (const notif of notifications) {
+                        if (!notif.phoneJid) continue
+                        try {
+                            await this.sock.sendMessage(notif.phoneJid, { text: notif.message })
+                        } catch (err: any) {
+                            logger.log(`Alert DM failed to ${notif.phoneJid}: ${err?.message}`, 'WARN', 'cryptotrade')
+                        }
+                    }
+                }
+            } catch (err: any) {
+                logger.log(`Trade notif loop error: ${err?.message}`, 'WARN', 'cryptotrade')
+            }
+        }, 5000)
+    }
+
+    private stopTradeNotifLoop() {
+        if (this.tradeNotifInterval) {
+            clearInterval(this.tradeNotifInterval)
+            this.tradeNotifInterval = null
         }
     }
 }

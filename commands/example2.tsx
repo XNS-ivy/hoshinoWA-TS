@@ -1,10 +1,10 @@
-export default {
-    name: 'example2',
-    access: "premium",
+const command: ICommand = {
+    name: "example",
+    access: "owner",
     inGroup: true,
     inGroupAccess: "member",
     args: ["args1", "args2"],
-    usage: 'example2',
+    usage: `example`,
     category: 'example',
     // custom: any
     async execute(args, { msg, socket, whoAMI }: ICTX) {
@@ -12,4 +12,8 @@ export default {
             text: `Command example running\nArgs: ${args.join(", ")}`
         })
     }
-} as ICommand
+}
+
+export default command
+
+// this one will cause error maybe will fix in the future
