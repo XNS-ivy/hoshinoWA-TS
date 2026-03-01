@@ -8,13 +8,14 @@ declare global {
         msg: IMessageFetch
         socket: WASocket
         whoAMI: {
-            role: "private" | "admin" | "member"
+            groupRole: "admin" | "member" | "private"
+            ownerRole: "master" | "owner" | false
         }
     }
 
     interface ICommand {
         name: string
-        access?: "owner" | "regular" | "premium"
+        access?: accessKey[] | accessKey
         inGroup?: boolean
         inGroupAccess?: "admin" | "member"
         args?: string[]
@@ -27,4 +28,5 @@ declare global {
     }
 }
 
+type accessKey = "owner" | "regular" | "premium" | "master"
 export { }

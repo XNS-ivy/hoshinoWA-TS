@@ -3,6 +3,7 @@ import { type WASocket } from 'baileys'
 import path from 'path'
 import fs from 'fs/promises'
 import { fileURLToPath, pathToFileURL } from "url"
+import { ownerHandler } from '@core/owner'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -18,55 +19,62 @@ export class CommandHandling {
     async execute(msg: IMessageFetch, socket: WASocket): Promise<void> {
         const { commandContent } = msg
         if (!commandContent) return
-        let whoAMI: {
-            role: 'private' | 'admin' | 'member'
-        } = { role: 'private' }
+
+        const ownerResult = await ownerHandler.isOwner(msg.lid)
+        const ownerRole: 'master' | 'owner' | false = ownerResult ? ownerResult.level : false
+
+        let groupRole: 'admin' | 'member' | 'private' = 'private'
         if (msg.isOnGroup) {
-            const user = (await socket.groupMetadata(msg.remoteJid)).participants.find(p => p.id === msg.lid)
-            const role: 'admin' | 'member' = user?.admin ? 'admin' : 'member'
-            whoAMI = {
-                role: role
+            try {
+                const user = (await socket.groupMetadata(msg.remoteJid))
+                    .participants.find(p => p.id === msg.lid)
+                groupRole = user?.admin ? 'admin' : 'member'
+            } catch (err: any) {
+                logger.log(`Gagal ambil group metadata: ${err?.message}`, 'WARN', 'command handler')
+                groupRole = 'member'
             }
         }
+
+        const whoAMI: ICTX['whoAMI'] = { groupRole, ownerRole }
 
         const { cmd, args } = commandContent
         const command = this.commands.get(cmd)
         if (!command) return
-        void command.execute(args, {
-            msg,
-            socket,
-            whoAMI,
-        })
+
+        void command.execute(args, { msg, socket, whoAMI })
         logger.log(`${cmd} Executed`, 'INFO', 'command handler')
     }
-    private async loadCommands(dir: string) {
-    const files = await fs.readdir(dir, { withFileTypes: true })
-
-    for (const file of files) {
-        const fullPath = path.join(dir, file.name)
-
-        if (file.isDirectory()) {
-            await this.loadCommands(fullPath)
-            continue
-        }
-
-        if (!file.name.match(/\.(ts|js)$/)) continue
-
-        const module = await import(pathToFileURL(fullPath).href)
-
-        const command = module.default as ICommand
-        if (!command?.name || typeof command.execute !== "function") continue
-        const relative = path.relative(this.commandPath, dir)
-        const category = relative
-            ? relative.split(path.sep)[0]
-            : 'general'
-        command.category = category ?? 'general'
-
-        this.commands.set(command.name, command)
+    async initOwner(socket: WASocket): Promise<void> {
+        await ownerHandler.init(socket)
     }
-}
+    private async loadCommands(dir: string) {
+        const files = await fs.readdir(dir, { withFileTypes: true })
+
+        for (const file of files) {
+            const fullPath = path.join(dir, file.name)
+
+            if (file.isDirectory()) {
+                await this.loadCommands(fullPath)
+                continue
+            }
+
+            if (!file.name.match(/\.(ts|js)$/)) continue
+
+            const module = await import(pathToFileURL(fullPath).href)
+
+            const command = module.default as ICommand
+            if (!command?.name || typeof command.execute !== "function") continue
+            const relative = path.relative(this.commandPath, dir)
+            const category = relative
+                ? relative.split(path.sep)[0]
+                : 'general'
+            command.category = category ?? 'general'
+
+            this.commands.set(command.name, command)
+        }
+    }
     async getCommandMapOnly(
-        whoAMI: { role: 'private' | 'admin' | 'member' },
+        whoAMI: ICTX['whoAMI'],
         isGroup: boolean
     ) {
         const result: ICommand[] = []
@@ -76,8 +84,12 @@ export class CommandHandling {
             if (isGroup && command.inGroupAccess) {
                 if (
                     command.inGroupAccess === 'admin' &&
-                    whoAMI.role !== 'admin'
+                    whoAMI.groupRole !== 'admin' &&
+                    !whoAMI.ownerRole 
                 ) continue
+            }
+            if (command.access === 'owner') {
+                if (!whoAMI.ownerRole) continue
             }
 
             result.push(command)

@@ -1,4 +1,4 @@
-import { makeWASocket, DisconnectReason, Browsers, useMultiFileAuthState } from 'baileys'
+import { makeWASocket, DisconnectReason, Browsers, useMultiFileAuthState, fetchLatestWaWebVersion } from 'baileys'
 import type { WASocket, AuthenticationState } from 'baileys'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
@@ -9,7 +9,8 @@ import { message, type IMessageFetch } from '@local_modules/whatsapp/msg-process
 import command from '@core/commands'
 import NodeCache from 'node-cache'
 import { ImprovedAuth } from '@local_modules/whatsapp/auth'
-
+import { convertLID } from '@local_modules/whatsapp/msg-processing'
+import { ownerHandler } from "@core/owner"
 class bot {
     private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true, maxKeys: 200, })
     private sock: null | WASocket
@@ -40,6 +41,7 @@ class bot {
         this.phoneNumber = phoneNumber
 
         await this.start()
+        if (this.sock) await ownerHandler.init(this.sock)
     }
 
     private async start() {
@@ -51,6 +53,7 @@ class bot {
             emitOwnEvents: false,
             generateHighQualityLinkPreview: true,
             cachedGroupMetadata: async (jid) => await bot.groupCache.get(jid),
+            version: (await fetchLatestWaWebVersion()).version
         })
         await this.Events()
     }
@@ -77,6 +80,7 @@ class bot {
                 for (const msg of messages) {
                     const chat = await message.fetch(msg)
                     if (chat) {
+                        // console.log(chat)
                         logger.log('Bot Append Message!', 'INFO', 'socket')
                         if (chat.commandContent) await this.message(chat)
                     }
@@ -107,7 +111,7 @@ class bot {
             }
             switch (connection) {
                 case 'open':
-                    logger.log(`Connected With : ${this.sock?.user?.name}`, 'INFO', 'socket')
+                    logger.log(`Connected With : ${this.sock?.user?.name} Lid : ${convertLID(this.sock?.user?.lid ?? null)}`, 'INFO', 'socket')
                     break
                 case 'close': {
                     const disconnected = (lastDisconnect?.error && 'output' in lastDisconnect.error)

@@ -13,7 +13,7 @@ export default {
             }, { quoted: msg.raw })
             return
         }
-        if ((!whoAMI || whoAMI.role !== 'admin')) {
+        if ((!whoAMI || whoAMI.groupRole !== 'admin')) {
             socket.sendMessage(msg.remoteJid, {
                 text: '❌ This command is for admin only!'
             }, { quoted: msg.raw })

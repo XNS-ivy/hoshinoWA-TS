@@ -147,6 +147,8 @@ test*.*
 
 # database
 databases/bot-configs.json
+databases/owner.json
 
 # lock file
 *.lock
+

@@ -83,6 +83,7 @@ export class MessageParse {
                 args
             }
         }
+        const convertedLid = convertLID(lid)
         if (!lid) return null
         return {
             remoteJid,
@@ -101,6 +102,7 @@ export class MessageParse {
             raw: msg,
             rawQuoted: quotedMessage ?? null,
             commandContent,
+            convertedLid
         }
     }
 
@@ -176,6 +178,7 @@ export interface IMessageFetch extends IKeyFetch {
         cmd: string,
         args: Array<string>,
     }
+    convertedLid: string | null,
     // add more type here if needed
 }
 
@@ -196,7 +199,7 @@ type MessageContent<T extends keyof proto.IMessage> = proto.IMessage[T]
 
 function unwrapMessage(msg: proto.IMessage | undefined | null): proto.IMessage | null {
     if (!msg) return null
-    
+
     if (msg.ephemeralMessage?.message)
         return unwrapMessage(msg.ephemeralMessage.message)
 
@@ -207,4 +210,10 @@ function unwrapMessage(msg: proto.IMessage | undefined | null): proto.IMessage |
         return unwrapMessage(msg.viewOnceMessageV2.message)
 
     return msg
+}
+
+export function convertLID(lid: string | null): string | null {
+    if (!lid) return null
+    const result = (lid.replace(/@lid$/i, '').split(':')[0] ?? '').trim()
+    return result || null
 }

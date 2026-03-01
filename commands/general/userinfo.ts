@@ -12,7 +12,8 @@ export default {
 
         const text = `👤 User Info
 📇 Name: ${msg.pushName}
-🎭 Role: ${whoAMI.role}
+🎭 Role: ${whoAMI.groupRole}
+👨🏻‍💻 IsOwner : ${whoAMI.ownerRole}
 📝 Biodata: ${bio}`
         const image = await socket.profilePictureUrl(msg.lid, "image")
         if (image) await socket.sendMessage(msg.remoteJid, { image: { url: image }, caption: text }, { quoted: msg.raw })
