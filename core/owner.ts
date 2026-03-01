@@ -89,6 +89,16 @@ export class OwnerHandler {
     async getAll(): Promise<IOwnerEntry[]> {
         return this.readDB()
     }
+    async changeLevel(lid: string, level: 'owner' | 'master'): Promise<void> {
+        const clean = convertLID(lid)
+        if (!clean) throw new Error('Invalid LID')
+        const db = await this.readDB()
+        const entry = db.find(o => o.lid === clean)
+        if (!entry) throw new Error(`${clean} is not registered as owner`)
+        if (entry.level === level) throw new Error(`${clean} is already at level ${level}`)
+        entry.level = level
+        await this.writeDB(db)
+    }
 }
 
 export const ownerHandler = new OwnerHandler()

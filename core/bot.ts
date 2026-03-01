@@ -41,7 +41,6 @@ class bot {
         this.phoneNumber = phoneNumber
 
         await this.start()
-        if (this.sock) await ownerHandler.init(this.sock)
     }
 
     private async start() {
@@ -112,6 +111,7 @@ class bot {
             switch (connection) {
                 case 'open':
                     logger.log(`Connected With : ${this.sock?.user?.name} Lid : ${convertLID(this.sock?.user?.lid ?? null)}`, 'INFO', 'socket')
+                    if (this.sock) await ownerHandler.init(this.sock)
                     break
                 case 'close': {
                     const disconnected = (lastDisconnect?.error && 'output' in lastDisconnect.error)
