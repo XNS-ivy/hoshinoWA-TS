@@ -10,7 +10,7 @@ export interface IOwnerEntry {
 
 export interface IOwnerResult {
     level: 'master' | 'owner'
-} 
+}
 
 export class OwnerHandler {
     private dbPath = path.resolve('./databases/owner.json')
@@ -36,7 +36,7 @@ export class OwnerHandler {
             const rawLid = this.sock?.user?.lid ?? null
             const masterLid = convertLID(rawLid)
             if (!masterLid) {
-                logger.log('Owner init: Tidak bisa ambil LID bot', 'WARN', 'owner')
+                logger.log('Owner init: Cannot retrieve bot LID', 'WARN', 'owner')
                 return
             }
 
@@ -46,10 +46,10 @@ export class OwnerHandler {
                 const filtered = db.filter(o => o.level !== 'master')
                 filtered.unshift({ lid: masterLid, level: 'master' })
                 await this.writeDB(filtered)
-                logger.log(`Master owner diset: ${masterLid}`, 'INFO', 'owner')
+                logger.log(`Master owner set: ${masterLid}`, 'INFO', 'owner')
             }
         } catch (err: any) {
-            logger.log(`Owner init gagal: ${err?.message}`, 'ERROR', 'owner')
+            logger.log(`Owner init failed: ${err?.message}`, 'ERROR', 'owner')
         }
     }
 
@@ -67,21 +67,21 @@ export class OwnerHandler {
 
     async addOwner(lid: string, level: 'owner' | 'master'): Promise<void> {
         const clean = convertLID(lid)
-        if (!clean) throw new Error('LID tidak valid')
+        if (!clean) throw new Error('Invalid LID')
         const db = await this.readDB()
         const exists = db.some(o => o.lid === clean)
-        if (exists) throw new Error(`Owner ${clean} sudah terdaftar`)
-        db.push({ lid: clean, level: 'owner' })
+        if (exists) throw new Error(`Owner ${clean} already registered`)
+        db.push({ lid: clean, level: level })
         await this.writeDB(db)
     }
 
     async removeOwner(lid: string): Promise<void> {
         const clean = convertLID(lid)
-        if (!clean) throw new Error('LID tidak valid')
+        if (!clean) throw new Error('Invalid LID')
         const db = await this.readDB()
         const entry = db.find(o => o.lid === clean)
-        if (!entry) throw new Error(`Owner ${clean} tidak ditemukan`)
-        if (entry.level === 'master') throw new Error('Tidak bisa hapus master owner')
+        if (!entry) throw new Error(`Owner ${clean} not found`)
+        if (entry.level === 'master') throw new Error('Cannot delete master owner')
         const filtered = db.filter(o => o.lid !== clean)
         await this.writeDB(filtered)
     }
