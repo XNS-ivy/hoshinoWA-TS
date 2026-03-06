@@ -90,7 +90,6 @@ class bot {
         })
 
         // event connection
-
         this.sock.ev.on('connection.update', async (connectionState) => {
             const { connection, qr, lastDisconnect } = connectionState
             if (qr && this.usePairingCode == false) {
@@ -209,7 +208,7 @@ class bot {
                     }
                 }
             } catch (err: any) {
-                logger.log(`Trade notif loop error: ${err?.message}`, 'WARN', 'cryptotrade')
+                logger.log(`Trade notification loop error: ${err?.message}`, 'WARN', 'cryptotrade')
             }
         }, 5000)
     }

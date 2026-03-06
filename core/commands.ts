@@ -30,7 +30,7 @@ export class CommandHandling {
                     .participants.find(p => p.id === msg.lid)
                 groupRole = user?.admin ? 'admin' : 'member'
             } catch (err: any) {
-                logger.log(`Gagal ambil group metadata: ${err?.message}`, 'WARN', 'command handler')
+                logger.log(`Failed to get group metadata: ${err?.message}`, 'WARN', 'command handler')
                 groupRole = 'member'
             }
         }
@@ -41,8 +41,10 @@ export class CommandHandling {
         const command = this.commands.get(cmd)
         if (!command) return
 
+        const primaryName = Array.isArray(command.name) ? command.name[0] : command.name
+
         void command.execute(args, { msg, socket, whoAMI })
-        logger.log(`${cmd} Executed`, 'INFO', 'command handler')
+        logger.log(`${primaryName} Executed (via: ${cmd})`, 'INFO', 'command handler')
     }
     async initOwner(socket: WASocket): Promise<void> {
         await ownerHandler.init(socket)
@@ -61,34 +63,33 @@ export class CommandHandling {
             if (!file.name.match(/\.(ts|js)$/)) continue
 
             const module = await import(pathToFileURL(fullPath).href)
-
             const command = module.default as ICommand
             if (!command?.name || typeof command.execute !== "function") continue
+
             const relative = path.relative(this.commandPath, dir)
-            const category = relative
-                ? relative.split(path.sep)[0]
-                : 'general'
+            const category = relative ? relative.split(path.sep)[0] : 'general'
             command.category = category ?? 'general'
 
-            this.commands.set(command.name, command)
+            const names = Array.isArray(command.name) ? command.name : [command.name]
+            for (const name of names) {
+                this.commands.set(name, command)
+            }
         }
     }
-    async getCommandMapOnly(
-        whoAMI: ICTX['whoAMI'],
-        isGroup: boolean
-    ) {
+    async getCommandMapOnly(whoAMI: ICTX['whoAMI'], isGroup: boolean) {
+        const seen = new Set<string>()
         const result: ICommand[] = []
 
         for (const [, command] of this.commands) {
+            const primaryName = Array.isArray(command.name) ? command.name[0]! : command.name as string
+            if (seen.has(primaryName)) continue
+            seen.add(primaryName)
+
             if (command.inGroup && !isGroup) continue
             if (isGroup && command.inGroupAccess) {
-                if (
-                    command.inGroupAccess === 'admin' &&
-                    whoAMI.groupRole !== 'admin' &&
-                    !whoAMI.ownerRole 
-                ) continue
+                if (command.inGroupAccess === 'admin' && whoAMI.groupRole !== 'admin' && !whoAMI.ownerRole) continue
             }
-            if (command.access === 'owner') {
+            if (command.access === 'owner' || command.access === 'master') {
                 if (!whoAMI.ownerRole) continue
             }
 
@@ -107,7 +108,7 @@ export class CommandHandling {
         ctx: ICTX,
     ) => Promise<void> | void
 }
-
+ 
 export interface ICTX {
     msg: IMessageFetch,
     socket: WASocket,

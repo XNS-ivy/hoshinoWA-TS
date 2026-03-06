@@ -114,9 +114,13 @@ export class MessageParse {
         const quotedType = getContentType(extracted) as keyof proto.IMessage
         const quotedContent: any = extracted[quotedType]
 
+        const text = quotedType === 'conversation'
+            ? (typeof quotedContent === 'string' ? quotedContent : null)
+            : quotedContent?.text ?? null
+
         return {
             type: quotedType,
-            text: quotedContent?.text ?? null,
+            text,
             caption: quotedContent?.caption ?? null,
             description: quotedContent?.description ?? null,
             expiration: quotedContent?.expiration ?? 0,

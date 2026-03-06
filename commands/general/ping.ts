@@ -1,6 +1,6 @@
 import ping from 'ping'
 export default {
-    name: 'ping',
+    name: ['ping', 'p'],
     access: 'regular',
     usage: ['ping <website url>', 'ping'],
     async execute(args, { msg, socket }) {

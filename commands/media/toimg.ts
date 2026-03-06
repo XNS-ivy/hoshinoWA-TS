@@ -3,7 +3,7 @@ import { downloadMediaMessage, type proto, type WAMessage } from "baileys"
 import sharp from 'sharp'
 
 export default {
-    name: 'toimg',
+    name: ['toimage', 'toimg'],
     usage: 'toimg (reply image / sticker)',
     category: 'media',
     async execute(_, { msg, socket }) {

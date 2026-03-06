@@ -27,27 +27,27 @@ function isValidLanguageCode(code: string): boolean {
 }
 
 export default {
-    name: 'translate',
+    name: ['translate', 'ts'],
     category: 'tools',
-    usage: ['translate <country code> <text>', 'translate languages', 'translate find <name>'],
+    usage: ['translate <country code> <text>', 'translate <country code> (reply message)', 'translate languages', 'translate find <name>'],
     async execute(args, { msg, socket }) {
+        logger.log(JSON.stringify({
+            hasQuoted: !!msg.quoted,
+            quotedType: msg.quoted?.type,
+            quotedText: msg.quoted?.text,
+            quotedCaption: msg.quoted?.caption,
+            quotedDescription: msg.quoted?.description,
+        }), 'ERROR', 'translate')
         if (!args[0]) {
             return socket.sendMessage(
                 msg.remoteJid,
-                { text: '❌ Please provide arguments.\n\nUsage:\ntranslate id I love you\ntranslate languages\ntranslate find Indonesian' },
+                { text: '❌ Please provide arguments.\n\nUsage:\ntranslate id I love you\ntranslate id (reply a message)\ntranslate languages\ntranslate find Indonesian' },
                 { quoted: msg.raw }
             )
         }
 
         const [cmd, ...rest] = args as string[]
-
-        if (!cmd) {
-            return socket.sendMessage(
-                msg.remoteJid,
-                { text: '❌ Please provide arguments.\n\nUsage:\ntranslate id I love you\ntranslate languages\ntranslate find Indonesian' },
-                { quoted: msg.raw }
-            )
-        }
+        if (!cmd) return
 
         if (cmd === 'languages') {
             const list = Object.entries(languages)
@@ -83,14 +83,6 @@ export default {
             )
         }
 
-        if (!rest.length) {
-            return socket.sendMessage(
-                msg.remoteJid,
-                { text: '❌ Please provide text to translate.\nExample: translate id I love you' },
-                { quoted: msg.raw }
-            )
-        }
-
         if (!isValidLanguageCode(cmd.toLowerCase())) {
             return socket.sendMessage(
                 msg.remoteJid,
@@ -99,15 +91,36 @@ export default {
             )
         }
 
+        let textToTranslate: string | null = null
+
+        if (rest.length > 0) {
+            textToTranslate = rest.join(' ')
+        } else if (msg.quoted) {
+            textToTranslate = msg.quoted.text ?? msg.quoted.caption ?? null
+        }
+
+        if (!textToTranslate) {
+            return socket.sendMessage(
+                msg.remoteJid,
+                { text: '❌ No text to translate.\nProvide text directly or reply to a message containing text.' },
+                { quoted: msg.raw }
+            )
+        }
+
         try {
-            const result = await translateLanguage(rest.join(' '), cmd.toLowerCase())
+            const result = await translateLanguage(textToTranslate, cmd.toLowerCase())
             const fromLang = getLanguage(result.from ?? '')
             const toLang = getLanguage(result.to ?? '')
 
             return socket.sendMessage(
                 msg.remoteJid,
                 {
-                    text: `🌐 *Translated*\n• From: ${fromLang} (${result.from?.toUpperCase()})\n• To: ${toLang} (${result.to?.toUpperCase()})\n• Original: ${rest.join(' ')}\n\n📝 *Result:*\n${result.text}`
+                    text:
+                        `🌐 *Translated*\n` +
+                        `• From: ${fromLang} (${result.from?.toUpperCase()})\n` +
+                        `• To: ${toLang} (${result.to?.toUpperCase()})\n` +
+                        `• Original: ${textToTranslate}\n\n` +
+                        `📝 *Result:*\n${result.text}`
                 },
                 { quoted: msg.raw }
             )

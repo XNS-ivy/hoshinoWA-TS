@@ -4,7 +4,7 @@ export default {
     inGroup: true,
     inGroupAccess: "member",
     args: ["args1", "args2"],
-    usage: 'example2',
+    usage: ['example2', 'exmpl2'],
     category: 'example',
     // custom: any
     async execute(args, { msg, socket, whoAMI }: ICTX) {

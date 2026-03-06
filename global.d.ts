@@ -14,7 +14,7 @@ declare global {
     }
 
     interface ICommand {
-        name: string
+        name: string | string[]
         access?: accessKey[] | accessKey
         inGroup?: boolean
         inGroupAccess?: "admin" | "member"

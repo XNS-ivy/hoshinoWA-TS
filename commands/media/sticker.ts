@@ -35,7 +35,7 @@ function parseArgs(args: string[]): StickerOptions & AnimatedStickerOptions {
 }
 
 export default {
-    name: 'sticker',
+    name: ['sticker', 'stc'],
     usage: [
         'sticker',
         'sticker crop',

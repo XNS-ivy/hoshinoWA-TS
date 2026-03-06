@@ -17,8 +17,8 @@ export interface ICoin {
     id: string
     name: string
     price: number
-    supply: number                  // total supply
-    circulatingSupply: number       // yang beredar di game
+    supply: number                  
+    circulatingSupply: number       
     lastUpdated: number
     priceHistory: IPriceHistory[]
     ipoStatus?: 'pending' | 'active' | 'done'
@@ -32,9 +32,9 @@ export interface IPriceHistory {
 export interface IWallet {
     lid: string
     phoneJid: string
-    balance: number                 // saldo cash
-    portfolio: Record<string, number>  // { BTC: 0.005, ETH: 0.2 }
-    totalDeposited: number          // untuk hitung profit/loss
+    balance: number                 
+    portfolio: Record<string, number>
+    totalDeposited: number
     registeredAt: number
 }
 
@@ -43,8 +43,8 @@ export interface IOrder {
     lid: string
     coin: string
     type: 'buy' | 'sell'
-    amountCash: number              // untuk buy (nominal cash)
-    amountCoin: number              // untuk sell (nominal Coin)
+    amountCash: number
+    amountCoin: number
     targetPrice: number
     createdAt: number
 }
@@ -66,24 +66,24 @@ export interface IAlert {
     lid: string
     coin: string
     targetPrice: number
-    direction: 'above' | 'below'    // notif kalau harga naik di atas atau turun di bawah target
+    direction: 'above' | 'below'
     createdAt: number
 }
 
 export interface IIpo {
     coinId: string
     ipoPrice: number
-    totalSlot: number               // total slot yang tersedia
+    totalSlot: number
     subscriptions: IIpoSubscription[]
-    deadline: number                // timestamp deadline subscribe
+    deadline: number
     status: 'open' | 'closed' | 'done'
     createdAt: number
 }
 
 export interface IIpoSubscription {
     lid: string
-    amountCash: number              // berapa cash yang di-lock
-    allocatedCoin?: number          // hasil alokasi setelah IPO close
+    amountCash: number
+    allocatedCoin?: number
 }
 
 export interface ITradeConfig {
@@ -107,7 +107,7 @@ export interface IPortfolioSummary {
     balance: number
     holdings: IHolding[]
     totalHoldingsValue: number
-    totalAssets: number             // balance + totalHoldingsValue
+    totalAssets: number
     totalDeposited: number
     profitLoss: number
     profitLossPercent: number
@@ -228,19 +228,16 @@ export class CryptoTrade {
         await this.writeJSON(this.coinsPath, coins)
     }
 
-    // Harga bergerak berdasarkan volume transaksi relatif terhadap circulating supply
     private calculatePriceImpact(
         currentPrice: number,
         volumeCash: number,
         circulatingSupply: number,
         type: 'buy' | 'sell'
     ): number {
-        // Market cap saat ini
         const marketCap = currentPrice * (circulatingSupply || 1)
-        // Impact: persentase volume terhadap market cap, maksimal 5% per transaksi
         const rawImpact = Math.min(volumeCash / marketCap, 0.05)
         const multiplier = type === 'buy' ? 1 + rawImpact : 1 - rawImpact
-        return Math.max(currentPrice * multiplier, 1) // harga minimum 1
+        return Math.max(currentPrice * multiplier, 1)
     }
 
     private async updatePrice(coinId: string, type: 'buy' | 'sell', volumeCash: number): Promise<void> {
@@ -256,7 +253,6 @@ export class CryptoTrade {
         coin.lastUpdated = Date.now()
         coin.priceHistory.push({ price: coin.price, timestamp: Date.now() })
 
-        // Simpan hanya 100 history terakhir
         if (coin.priceHistory.length > 100) {
             coin.priceHistory = coin.priceHistory.slice(-100)
         }
@@ -274,7 +270,6 @@ export class CryptoTrade {
         if (!coin) throw new Error(`Coin ${coinId} not found.`)
 
         coin.circulatingSupply += amount
-        // Inject → supply naik → harga turun, impact lebih besar (2x)
         const impactPrice = this.calculatePriceImpact(
             coin.price,
             coin.price * amount * 2,
@@ -298,7 +293,6 @@ export class CryptoTrade {
         if (coins[idx].circulatingSupply < amount) throw new Error('The number of burns exceeds the circulating supply.')
 
         coins[idx].circulatingSupply -= amount
-        // Burn → supply turun → harga naik, impact lebih besar (2x)
         const impactPrice = this.calculatePriceImpact(
             coins[idx].price,
             coins[idx].price * amount * 2,
@@ -344,7 +338,6 @@ export class CryptoTrade {
         return newWallet
     }
 
-    // Init wallet untuk semua owner (dipanggil saat init)
     async initOwnerWallets(owners: { lid: string; phoneJid?: string }[]): Promise<void> {
         const wallets = await this.getWallets()
         let changed = false
@@ -424,7 +417,6 @@ export class CryptoTrade {
         const config = await this.getConfig()
         const wallets = await this.getWallets()
 
-        // Import ownerHandler secara dinamis untuk hindari circular dependency
         const { ownerHandler } = await import('@core/owner')
         const allOwners = await ownerHandler.getAll()
 
@@ -585,7 +577,6 @@ export class CryptoTrade {
             )
         }
 
-        // Lock dana saat order dibuat
         wallet.balance -= totalLocked
         await this.updateWallet(wallet)
 
@@ -595,7 +586,7 @@ export class CryptoTrade {
             coin: coin.id,
             type: 'buy',
             amountCash,
-            amountCoin: 0,          // akan dihitung saat eksekusi
+            amountCoin: 0,
             targetPrice,
             createdAt: Date.now(),
         }
@@ -621,7 +612,6 @@ export class CryptoTrade {
             )
         }
 
-        // Lock Coin saat order dibuat
         wallet.portfolio[coin.id] = held - amountCoin
         if ((wallet.portfolio[coin.id] ?? 0) <= 0) delete wallet.portfolio[coin.id]
         await this.updateWallet(wallet)
@@ -631,7 +621,7 @@ export class CryptoTrade {
             lid,
             coin: coin.id,
             type: 'sell',
-            amountCash: 0,          // akan dihitung saat eksekusi
+            amountCash: 0,
             amountCoin,
             targetPrice,
             createdAt: Date.now(),
@@ -653,7 +643,6 @@ export class CryptoTrade {
         const wallet = await this.getWallet(lid)
         if (!wallet) throw new Error('Wallet not found.')
 
-        // Kembalikan dana / Coin yang di-lock
         if (order.type === 'buy') {
             const config = await this.getConfig()
             const fee = Math.floor(order.amountCash * (config.feePercent / 100))
@@ -668,7 +657,6 @@ export class CryptoTrade {
         return order
     }
 
-    // Dipanggil setiap kali ada transaksi pada Coin tersebut
     async checkAndExecutePendingOrders(coinId: string): Promise<void> {
         const coin = await this.getCoin(coinId)
         if (!coin) return
@@ -787,7 +775,6 @@ export class CryptoTrade {
         await this.writeJSON(this.alertsPath, alerts)
     }
 
-    // Return: list wallet phoneJid yang perlu dinotif + pesan alertnya
     async checkAlerts(coinId: string): Promise<{ phoneJid: string; message: string }[]> {
         const coin = await this.getCoin(coinId)
         if (!coin) return []
@@ -819,7 +806,6 @@ export class CryptoTrade {
             })
         }
 
-        // Hapus alert yang sudah triggered
         const remainingAlerts = alerts.filter(a => !triggered.some(t => t.id === a.id))
         await this.writeJSON(this.alertsPath, remainingAlerts)
 
@@ -907,11 +893,9 @@ export class CryptoTrade {
             throw new Error(`Insufficient balance. Balance: ${wallet.balance.toLocaleString()}`)
         }
 
-        // Cek apakah sudah subscribe
         const existingSub = ipo.subscriptions.find(s => s.lid === lid)
         if (existingSub) throw new Error('Already subscribed to this IPO')
 
-        // Lock dana
         wallet.balance -= amountCash
         await this.updateWallet(wallet)
 
@@ -943,7 +927,6 @@ export class CryptoTrade {
         let refunded = 0
 
         if (totalCoinNeeded <= ipo.totalSlot) {
-            // Semua dapat alokasi penuh
             for (const sub of ipo.subscriptions) {
                 const wallet = await this.getWallet(sub.lid)
                 if (!wallet) continue
@@ -954,7 +937,6 @@ export class CryptoTrade {
             }
             coin.circulatingSupply += totalCoinNeeded
         } else {
-            // Oversubscribed — alokasi proporsional
             const allocationRatio = ipo.totalSlot / totalCoinNeeded
             for (const sub of ipo.subscriptions) {
                 const wallet = await this.getWallet(sub.lid)
@@ -964,7 +946,7 @@ export class CryptoTrade {
                 const refundCash = sub.amountCash - usedCash
 
                 wallet.portfolio[coinId] = (wallet.portfolio[coinId] ?? 0) + allocatedCoin
-                wallet.balance += refundCash  // kembalikan sisa
+                wallet.balance += refundCash
                 await this.updateWallet(wallet)
                 success++
                 refunded += refundCash > 0 ? 1 : 0
@@ -972,7 +954,6 @@ export class CryptoTrade {
             coin.circulatingSupply += ipo.totalSlot
         }
 
-        // Update harga Coin ke harga IPO setelah listing
         coin.price = ipo.ipoPrice
         coin.priceHistory.push({ price: ipo.ipoPrice, timestamp: Date.now() })
         coins[coinIdx] = coin
