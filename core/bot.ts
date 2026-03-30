@@ -1,5 +1,5 @@
-import { makeWASocket, DisconnectReason, Browsers, useMultiFileAuthState, fetchLatestWaWebVersion } from 'baileys'
-import type { WASocket, AuthenticationState } from 'baileys'
+import { makeWASocket, DisconnectReason, Browsers, fetchLatestWaWebVersion } from 'baileys'
+import type { WASocket, AuthenticationState, WAMessage } from 'baileys'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
 import { Boom } from '@hapi/boom'
@@ -12,9 +12,34 @@ import { ImprovedAuth } from '@local_modules/whatsapp/auth'
 import { convertLID } from '@local_modules/whatsapp/msg-processing'
 import { ownerHandler } from "@core/owner"
 
+// Cache pesan untuk anti delete & anti edit
+// key: message.key.id → value: WAMessage lengkap
+interface ICachedMessage {
+    key: WAMessage['key']
+    message: WAMessage['message']
+    pushName?: string | null
+    participant?: string | null
+    remoteJid: string
+}
+
 class bot {
+
     private tradeNotifInterval: Timer | null = null
-    private static groupCache = new NodeCache({ stdTTL: 30 * 60, useClones: false, deleteOnExpire: true, maxKeys: 200, })
+
+    private static groupCache = new NodeCache({
+        stdTTL: 30 * 60,
+        useClones: false,
+        deleteOnExpire: true,
+        maxKeys: 200,
+    })
+
+    private static messageCache = new NodeCache({
+        stdTTL: 60 * 60,
+        useClones: false,
+        deleteOnExpire: true,
+        maxKeys: 5000
+    })
+
     private sock: null | WASocket
     private usePairingCode: boolean
     private phoneNumber: string | null | undefined
@@ -26,6 +51,7 @@ class bot {
         !Number.isNaN(process.env.MAX_DIE_SOCKET)) ? 2 : Number(process.env.MAX_DIE_SOCKET)
     private static authFile: string = (String(process.env.AUTH_FILE_NAME) == '' ||
         !String(process.env.AUTH_FILE_NAME)) ? 'auth' : String(process.env.AUTH_FILE_NAME)
+
     constructor() {
         this.state = null
         this.sock = null
@@ -34,6 +60,7 @@ class bot {
         this.saveCreds = null
         this.autodie = 0
     }
+
     async init(pairingCode: boolean = false, phoneNumber?: string) {
         // const auth = await useMultiFileAuthState(bot.authFile)
         const auth = new ImprovedAuth(bot.authFile)
@@ -58,44 +85,101 @@ class bot {
         })
         await this.Events()
     }
+
     private async Events() {
         if (!this.sock) return
 
-        // event savecreds
-        if (this.saveCreds) this.sock?.ev.on('creds.update', this.saveCreds)
+        if (this.saveCreds) this.sock.ev.on('creds.update', this.saveCreds)
 
-        // evemt message
+        // ── MESSAGES UPSERT ───────────────────────────────────
         this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
-            if (type == 'notify') {
-                for (const msg of messages) {
-                    const chat = await message.fetch(msg)
-                    if (chat) {
-                        // console.log(chat)
-                        logger.log('Got Notify Message!', 'INFO', 'socket')
-                        if (chat.commandContent) await this.message(chat)
+            if (type !== 'notify' && type !== 'append') return
+            for (const msg of messages) {
+                if (!msg.key?.id || !msg.key?.remoteJid) continue
+                const chat = await message.fetch(msg)
+                console.log(chat)
+                const isGroup = msg.key.remoteJid.endsWith('@g.us')
+                if (isGroup && msg.message) {
+                    const cacheId = `${msg.key.remoteJid}_${msg.key.id}`
+                    if (cacheId) {
+                        bot.messageCache.set(cacheId, {
+                            key: msg.key,
+                            message: msg.message,
+                            pushName: msg.pushName,
+                            participant: msg.key.participant,
+                            remoteJid: msg.key.remoteJid
+                        })
                     }
                 }
-            }
-
-            if (type == 'append') {
-                for (const msg of messages) {
-                    const chat = await message.fetch(msg)
-                    if (chat) {
-                        // console.log(chat)
-                        logger.log('Bot Append Message!', 'INFO', 'socket')
-                        if (chat.commandContent) await this.message(chat)
+                if (msg.message?.protocolMessage?.type === 0) {
+                    if (!msg.key.remoteJid?.endsWith('@g.us')) return
+                    const { groupConfig } = await import('@core/groups-config')
+                    const config = await groupConfig.getConfig(msg.key.remoteJid)
+                    if (!config.antiDelete) return
+                    const deletedKey = msg.message.protocolMessage.key
+                    const deletedId = deletedKey?.id
+                    if (!deletedId) return
+                    const cacheId = `${msg.key.remoteJid}_${deletedId}`
+                    const cached = bot.messageCache.get<ICachedMessage>(cacheId)
+                    if (!cached) {
+                        return
                     }
+                    const groupJid = msg.key.remoteJid
+                    if (!this.sock) return
+
+                    await this.sock.sendMessage(groupJid, {
+                        text: `⚠️ *Anti Delete Active*\nDeleted messages are successfully recovered`
+                    })
+                    await this.sock.sendMessage(groupJid, {
+                        forward: cached
+                    })
+                }
+                if (chat) {
+                    logger.log(`Bot ${type} Message!`, 'INFO', 'socket')
+                    if (chat.commandContent) await this.message(chat)
                 }
             }
         })
 
-        // event connection
+        // ── GROUP PARTICIPANTS UPDATE (welcome) ───────────────
+        this.sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
+            if (action !== 'add') return
+            if (!this.sock) return
+
+            const { groupConfig } = await import('@core/groups-config')
+            const config = await groupConfig.getConfig(id)
+            if (!config.welcome) return
+
+            try {
+                const meta = await this.sock.groupMetadata(id)
+
+                for (const participant of participants) {
+                    const participantJid = participant.id
+                    const rendered = groupConfig.renderWelcome(config.welcomeMessage, {
+                        name: `@${participantJid.replace('@s.whatsapp.net', '').replace('@lid', '')}`,
+                        group: meta.subject,
+                        count: meta.participants.length,
+                    })
+
+                    await this.sock.sendMessage(id, {
+                        text: rendered,
+                        mentions: [participantJid],
+                    })
+                }
+            } catch (err: any) {
+                logger.log(`Welcome message failed: ${err?.message}`, 'WARN', 'group-config')
+            }
+        })
+
+        // ── CONNECTION UPDATE ─────────────────────────────────
         this.sock.ev.on('connection.update', async (connectionState) => {
             const { connection, qr, lastDisconnect } = connectionState
+
             if (qr && this.usePairingCode == false) {
                 qrcode.generate(qr, { small: true })
                 this.autodie++
             }
+
             if (!!qr && this.usePairingCode == true && this.phoneNumber && this.sock?.user?.status == undefined) {
                 try {
                     setTimeout(() => {
@@ -109,6 +193,7 @@ class bot {
                     logger.log('Cannot Request Pairing Code! Check Your Phone Number Correctly', 'ERROR', 'socket')
                 }
             }
+
             switch (connection) {
                 case 'open':
                     logger.log(`Connected With : ${this.sock?.user?.name} Lid : ${convertLID(this.sock?.user?.lid ?? null)}`, 'INFO', 'socket')
@@ -125,6 +210,7 @@ class bot {
                         this.startTradeNotifLoop()
                     }
                     break
+
                 case 'close':
                     this.stopTradeNotifLoop()
                     {
@@ -161,6 +247,7 @@ class bot {
                         }
                         break
                     }
+
                 case 'connecting':
                     this.autodie = 0
                     if (this.sock?.user == undefined) {
@@ -169,11 +256,13 @@ class bot {
                         logger.log('Connecting...', 'INFO', 'socket')
                     }
                     break
+
                 default:
                     break
             }
         })
     }
+
     private async message(msg: IMessageFetch) {
         try {
             if (this.sock) bot.command.execute(msg, this.sock)
@@ -181,6 +270,7 @@ class bot {
             logger.log(`Generally error executing commands : ${e}`, 'ERROR', 'socket')
         }
     }
+
     async checkDie() {
         if (this.sock?.user == undefined) {
             if (this.autodie >= bot.maxAutoDie) {
@@ -189,6 +279,7 @@ class bot {
             }
         }
     }
+
     private async startTradeNotifLoop() {
         if (this.tradeNotifInterval) return
         const { cryptoTrade } = await import('./minigames/cryptoTrade')
@@ -208,7 +299,7 @@ class bot {
                     }
                 }
             } catch (err: any) {
-                logger.log(`Trade notification loop error: ${err?.message}`, 'WARN', 'cryptotrade')
+                logger.log(`Trade notif loop error: ${err?.message}`, 'WARN', 'cryptotrade')
             }
         }, 5000)
     }
@@ -220,5 +311,6 @@ class bot {
         }
     }
 }
+
 const sock = new bot()
 export default sock

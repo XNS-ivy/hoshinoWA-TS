@@ -87,7 +87,7 @@ export default {
                 externalAdReply: {
                     mediaType: 1,
                     renderLargerThumbnail: true,
-                    thumbnail,
+                    thumbnail: thumbnail,
                     title: await config.getConfig('name') ?? 'Hoshino Bot',
                     body: `Prefix: " ${prefix} " • ${commands.length} Commands Online`,
                 }
