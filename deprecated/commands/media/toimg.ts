@@ -4,7 +4,7 @@ import sharp from 'sharp'
 
 export default {
     name: ['toimage', 'toimg'],
-    usage: 'toimg (reply image / sticker)',
+    usage: 'toimg (reply image / sticker )',
     category: 'media',
     async execute(_, { msg, socket }) {
         if (!msg.quoted) {

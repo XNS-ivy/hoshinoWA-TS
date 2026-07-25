@@ -3,11 +3,10 @@
     // Environment setup & latest features
     "lib": ["ESNext"],
     "target": "ESNext",
-    "module": "Preserve",
+    "module": "esnext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-    "typeRoots": ["./node_modules/@types", "./types"],
 
     // Bundler mode
     "moduleResolution": "bundler",
@@ -25,12 +24,6 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-    "paths": {
-      "@core/*": ["./core/*"],
-      "@utils/*": ["./utils/*"],
-      "@local_modules/*": ["./modules/*"],
-      "@schemas/*":["./schemas/*"]
-    }
+    "noPropertyAccessFromIndexSignature": false
   }
 }
