@@ -7,7 +7,14 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!dist", "!auth", "!node_modules", "!**/*.json", "!databases"]
+		"includes": [
+			"**",
+			"!dist",
+			"!auth",
+			"!node_modules",
+			"!**/*.json",
+			"!databases"
+		]
 	},
 	"formatter": {
 		"enabled": true,

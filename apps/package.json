@@ -7,17 +7,31 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "bun run --watch ./index.ts",
-    "build": "bun build ./index.ts --compile --minify --outfile ./dist/hoshino",
+    "dev": "bun run --watch ./src/index.ts",
+    "build": "bun build ./src/index.ts --compile --minify --outfile ./dist/hoshino",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.5",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/pino": "^7.0.5",
+    "@types/qrcode": "^1.5.6",
+    "@types/qrcode-terminal": "^0.12.2"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "baileys": "^7.0.0-rc13",
+    "colors": "^1.4.0",
+    "dotenv": "^17.4.2",
+    "jimp": "^1.6.1",
+    "node-cache": "^5.1.2",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
   }
 }
