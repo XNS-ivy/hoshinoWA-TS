@@ -1,23 +1,23 @@
-import {
-    makeWASocket,
-    Browsers
-} from "baileys"
-
-import type {
-    WASocket
-} from 'baileys'
+import type { WASocket } from "baileys"
+import { Browsers, makeWASocket } from "baileys"
+import { ImprovedAuth } from "./auth"
 
 class WhatsappSocket {
-    private sock: null | WASocket = null
+	private sock: null | WASocket = null
 
-    async init(_pairingCode: boolean = false) { }
-    async start() {
-        this.sock = makeWASocket({
-            auth: ,
-            browser: Browsers.appropriate('Google Chrome'),
+	async init(_pairingCode: boolean = false) {}
 
-        })
-    }
+	async start() {
+		const auth = new ImprovedAuth()
+		this.sock = makeWASocket({
+			auth: auth.state,
+			browser: Browsers.appropriate("Google Chrome"),
+		})
+	}
+
+	getSocket() {
+		return this.sock
+	}
 }
 
 const whatsappSocket = new WhatsappSocket()
