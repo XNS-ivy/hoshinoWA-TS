@@ -76,13 +76,14 @@ export class ImprovedAuth {
 		try {
 			const baseName = this.sanitizeFileName(path.basename(file))
 			const safeFile = path.join(path.dirname(file), baseName)
+			fs.mkdirSync(path.dirname(safeFile), { recursive: true })
 			fs.writeFileSync(
 				`${safeFile}.tmp`,
 				JSON.stringify(data, BufferJSON.replacer, 2),
 			)
 			fs.renameSync(`${safeFile}.tmp`, safeFile)
-		} catch {
-			logger.log("Failed to save file", "ERROR", "auth")
+		} catch (e) {
+			logger.log(`Failed to save file ${file}: ${e}`, "ERROR", "auth")
 		}
 	}
 
